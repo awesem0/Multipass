@@ -106,8 +106,6 @@
       });
     }
 
-    // Rest of the code (drag, keyboard, etc.) same as before...
-
     document.getElementById('photoUpload').addEventListener('change', e => {
       let file = e.target.files[0];
       if (file) {
@@ -133,7 +131,6 @@
       saveCanvas(name, 'png');
     });
 
-    // Drag + keyboard (same as Ferrari)
     function mousePressed() { if (photoImg) { isDragging = true; dragOffsetX = mouseX - (width/2 + photoX); dragOffsetY = mouseY - (height/2 + photoY); }}
     function mouseDragged() { if (isDragging) { photoX = mouseX - width/2 - dragOffsetX; photoY = mouseY - height/2 - dragOffsetY; }}
     function mouseReleased() { isDragging = false; }

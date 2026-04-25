@@ -29,10 +29,6 @@
         <label class="button">UPLOAD TEMPLATE <input type="file" id="templateUpload" accept="image/*" style="display:none;"></label>
         
         <div id="additional-controls">
-          <div style="display:flex; gap:10px;">
-            <button onclick="loadGender('M')" style="flex:1;">MALE</button>
-            <button onclick="loadGender('F')" style="flex:1;">FEMALE</button>
-          </div>
           <label class="button">UPLOAD PHOTO <input type="file" id="photoUpload" accept="image/*" style="display:none;"></label>
           <input type="text" id="nameInput" placeholder="Enter full name" maxlength="40">
           <label>Photo Size: <input type="range" id="sizeSlider" min="0.3" max="2.5" step="0.01" value="1.4"></label>
@@ -98,13 +94,17 @@
       }
     }
 
-    function loadGender(gender) {
-      let url = `https://raw.githubusercontent.com/awesem0/Multipass/main/${gender}-MULTIPASS.png`;
-      loadImage(url, img => {
-        templateImg = img;
-        document.getElementById('additional-controls').style.display = 'flex';
-      });
-    }
+    document.getElementById('templateUpload').addEventListener('change', e => {
+      let file = e.target.files[0];
+      if (file) {
+        let url = URL.createObjectURL(file);
+        loadImage(url, img => {
+          templateImg = img;
+          document.getElementById('additional-controls').style.display = 'flex';
+          URL.revokeObjectURL(url);
+        });
+      }
+    });
 
     document.getElementById('photoUpload').addEventListener('change', e => {
       let file = e.target.files[0];

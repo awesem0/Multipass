@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multipass Card Customizer</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.2/p5.min.js"></script>
+  <style>
+    body { margin:0; padding:0; background:#111; color:#fff; font-family:Arial; padding-top:80px; }
+    .main-container { display:flex; flex-direction:column; align-items:center; gap:20px; padding:20px; min-height:100vh; }
+    .tool-row { display:flex; flex-wrap:wrap; justify-content:center; gap:20px; width:100%; max-width:840px; }
+    #canvas-container { width:540px; height:340px; background:white; border-radius:20px; overflow:hidden; }
+    .controls { display:flex; flex-direction:column; gap:8px; width:280px; }
+    .button, label.button { padding:14px 20px; background:#3b82f6; color:white; border:none; font-size:15px; cursor:pointer; width:100%; text-align:center; text-decoration:none; box-sizing:border-box; }
+    .button:hover { background:#2563eb; }
+    input[type="text"], input[type="range"] { width:100%; padding:12px; font-size:18px; box-sizing:border-box; }
+    .disclaimer { font-size:12px; text-align:center; margin:5px 0; color:#ddd; }
+    #additional-controls { display:none; flex-direction:column; gap:8px; }
+    .video-tutorial { margin:10px 0 20px 0; text-align:center; width:100%; max-width:840px; }
+    .video-tutorial iframe { width:100%; max-width:840px; height:473px; border:none; border-radius:12px; }
+  </style>
+</head>
+<body>
+  <div class="main-container">
+    <div class="tool-row">
+      <div id="canvas-container"></div>
+      <div class="controls">
+        <a href="https://dailyprintdelights.etsy.com" target="_blank" class="button">BUY TEMPLATES</a>
+        <label class="button">UPLOAD TEMPLATE <input type="file" id="templateUpload" accept="image/*" style="display:none;"></label>
+        
+        <div id="additional-controls">
+          <div style="display:flex; gap:10px;">
+            <button onclick="loadGender('M')" style="flex:1;">MALE</button>
+            <button onclick="loadGender('F')" style="flex:1;">FEMALE</button>
+          </div>
+          <label class="button">UPLOAD PHOTO <input type="file" id="photoUpload" accept="image/*" style="display:none;"></label>
+          <input type="text" id="nameInput" placeholder="Enter full name" maxlength="40">
+          <label>Photo Size: <input type="range" id="sizeSlider" min="0.3" max="2.5" step="0.01" value="1.4"></label>
+          <button id="download" class="button">DOWNLOAD CARD</button>
+          <div class="disclaimer">This is a cosplay tool. No data or images are saved.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="video-tutorial">
+      <iframe src="https://www.youtube.com/embed/USozvRE2INs" frameborder="0" allowfullscreen></iframe>
+    </div>
+  </div>
+
+  <script>
+    let canvas, templateImg = null, photoImg = null;
+    let photoX = 0, photoY = 0, photoScale = 0.8;
+    let isDragging = false, dragOffsetX = 0, dragOffsetY = 0;
+    let nameLetters = [];
+    let letterMap = {};
+    let canvasW = 540, canvasH = 340;
+
+    function preload() {
+      const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ ';
+      for (let char of letters) {
+        if (char === ' ') continue;
+        loadImage(`https://raw.githubusercontent.com/awesem0/Ferrari/main/${char}.png`, img => letterMap[char] = img);
+      }
+    }
+
+    function setup() {
+      let c = createCanvas(canvasW, canvasH);
+      c.parent('canvas-container');
+    }
+
+    function draw() {
+      clear();
+      if (templateImg) image(templateImg, 0, 0, width, height);
+
+      if (photoImg) {
+        push();
+        translate(width/2 + photoX, height/2 + photoY);
+        scale(photoScale);
+        imageMode(CENTER);
+        image(photoImg, 0, 0);
+        pop();
+      }
+
+      if (nameLetters.length > 0) {
+        let x = width * 0.04;
+        let y = height * 0.93;
+        let letterH = 32;
+        let gap = 1.5;
+        for (let letter of nameLetters) {
+          if (letter === ' ') { x += 20; continue; }
+          let img = letterMap[letter];
+          if (img) {
+            let s = letterH / img.height;
+            image(img, x, y - letterH, img.width * s, letterH);
+            x += img.width * s + gap;
+          }
+        }
+      }
+    }
+
+    function loadGender(gender) {
+      let url = `https://raw.githubusercontent.com/awesem0/Multipass/main/${gender}-MULTIPASS.png`;
+      loadImage(url, img => {
+        templateImg = img;
+        document.getElementById('additional-controls').style.display = 'flex';
+      });
+    }
+
+    // Rest of the code (drag, keyboard, etc.) same as before...
+
+    document.getElementById('photoUpload').addEventListener('change', e => {
+      let file = e.target.files[0];
+      if (file) {
+        let url = URL.createObjectURL(file);
+        loadImage(url, img => {
+          photoImg = img;
+          photoX = 0; photoY = 0; photoScale = 0.8;
+          document.getElementById('sizeSlider').value = 1.4;
+          URL.revokeObjectURL(url);
+        });
+      }
+    });
+
+    document.getElementById('nameInput').addEventListener('input', () => {
+      let name = document.getElementById('nameInput').value.toUpperCase();
+      nameLetters = name.split('');
+    });
+
+    document.getElementById('sizeSlider').addEventListener('input', e => photoScale = parseFloat(e.target.value));
+
+    document.getElementById('download').addEventListener('click', () => {
+      let name = document.getElementById('nameInput').value.trim().toUpperCase().replace(/ /g, '_') || 'multipass';
+      saveCanvas(name, 'png');
+    });
+
+    // Drag + keyboard (same as Ferrari)
+    function mousePressed() { if (photoImg) { isDragging = true; dragOffsetX = mouseX - (width/2 + photoX); dragOffsetY = mouseY - (height/2 + photoY); }}
+    function mouseDragged() { if (isDragging) { photoX = mouseX - width/2 - dragOffsetX; photoY = mouseY - height/2 - dragOffsetY; }}
+    function mouseReleased() { isDragging = false; }
+    function mouseWheel(e) { if (photoImg) photoScale *= e.delta > 0 ? 0.95 : 1.05; }
+
+    function keyPressed() {
+      if (!photoImg) return;
+      let step = 5;
+      if (keyCode === LEFT_ARROW) photoX -= step;
+      if (keyCode === RIGHT_ARROW) photoX += step;
+      if (keyCode === UP_ARROW) photoY -= step;
+      if (keyCode === DOWN_ARROW) photoY += step;
+    }
+  </script>
+</body>
+</html>

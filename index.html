@@ -36,7 +36,6 @@
       max-width: 1100px;
     }
 
-    /* Canvas wrapper — full internal 1010×638, displayed at ~53% */
     #canvas-wrap {
       position: relative;
       width: 540px;
@@ -59,7 +58,6 @@
     }
     #card-canvas:active { cursor: grabbing; }
 
-    /* Placeholder image (GitHub raw) — shown behind canvas until template uploaded */
     #placeholder-img {
       position: absolute;
       inset: 0;
@@ -154,19 +152,16 @@
   <div class="tool-row">
 
     <div id="canvas-wrap">
-      <!-- Placeholder: LEELOO DALLAS example from your GitHub repo -->
       <img id="placeholder-img"
            src="https://raw.githubusercontent.com/awesem0/Multipass/0e00515cd0cd581340f11c57f96212985759b4cc/LEELOO%20DALLAS_multipass_card.png"
            alt="Example Multipass card - Leeloo Dallas"
-           onerror="this.style.display='none'; console.log('Placeholder image failed to load from GitHub')">
+           onerror="this.style.display='none'">
 
-      <!-- Full internal resolution 1010×638 (matches your template) -->
       <canvas id="card-canvas" width="1010" height="638"></canvas>
     </div>
 
     <div class="controls">
       <a href="https://dailyprintdelights.etsy.com" target="_blank" class="btn">Buy Official Templates</a>
-
       <button id="demoBtn" class="btn secondary">Load Demo (Leeloo Dallas)</button>
 
       <label class="btn secondary">
@@ -176,73 +171,48 @@
 
       <div id="extra-controls">
         <div class="divider"></div>
-
         <label class="btn secondary">
           Upload Your Photo
           <input type="file" id="photoUpload" accept="image/*" style="display:none">
         </label>
-
         <input type="text" id="nameInput" placeholder="ENTER FULL NAME" maxlength="40" autocomplete="off">
-
         <div class="slider-row">
           <label>PHOTO ZOOM / SIZE</label>
           <input type="range" id="sizeSlider" min="0.05" max="5" step="0.01" value="1.0">
         </div>
-
         <button id="downloadBtn" class="btn">DOWNLOAD CARD + REAR</button>
-
-        <p class="hint">
-          Drag photo to move • Scroll or pinch to zoom<br>
-          Arrow keys for fine nudge • Matches Python reference exactly
-        </p>
+        <p class="hint">Drag to move • Scroll/pinch to zoom • Arrow keys • Exact Python logic</p>
       </div>
     </div>
-
   </div>
 
   <div class="video-wrap">
-    <iframe src="https://www.youtube.com/embed/USozvRE2INs" allowfullscreen title="Multipass Tutorial"></iframe>
+    <iframe src="https://www.youtube.com/embed/USozvRE2INs" allowfullscreen></iframe>
   </div>
 
-  <div class="demo-note">Name now TOP-RIGHT • Negative boundary fixed (smaller, non-overlapping) • Placeholder from your GitHub repo</div>
+  <div class="demo-note">Name now perfectly TOP-RIGHT in red (65px) • Negative only on left slot • No more red J's</div>
 
   <script>
-    // ═══════════════════════════════════════════════════════════════════
-    //  GEOMETRY — 1010 × 638 canvas space (exact template size)
-    //  Corrected from Python reference to fix overlapping + name position
-    // ═══════════════════════════════════════════════════════════════════
-
     const CW = 1010, CH = 638;
 
-    // Smaller, non-overlapping photo slots (typical ID photo size)
-    // These prevent the negative from covering the normal photo
-    const LEFT_RECT  = { x:  85, y: 145, w: 225, h: 285 };   // negative / blue
-    const RIGHT_RECT = { x: 355, y: 145, w: 225, h: 285 };   // normal photo
+    // FINAL CORRECTED GEOMETRY (matches your desired output exactly)
+    const LEFT_RECT  = { x:  85, y: 145, w: 225, h: 285 };
+    const RIGHT_RECT = { x: 355, y: 145, w: 225, h: 285 };
 
-    // Name positioned TOP-RIGHT (was bottom in previous versions)
-    const NAME_RECT  = { x: 610, y: 48, w: 370, h: 72 };
+    // NAME EXACTLY TOP-RIGHT like the second image
+    const NAME_RECT  = { x: 600, y: 35, w: 380, h: 75 };
+    const NAME_PASTE_X = 600 - 8 + 2;   // 594
+    const NAME_PASTE_Y = 35 - 10 + 15;  // 40
+    const NAME_FONT_SZ = 65;            // Exact Python size
 
-    // Python nudges applied + scaled
-    const NAME_PASTE_X = 610 - 8 + 2;     // 604
-    const NAME_PASTE_Y = 48 - 10 + 15;    // 53
-    const NAME_FONT_SZ = 58;              // Python 65px on 1010px canvas
-
-    // ═══════════════════════════════════════════════════════════════════
-    //  State
-    // ═══════════════════════════════════════════════════════════════════
     let templateImg = null, photoImg = null;
     let photoX = 0, photoY = 0, photoScale = 1.0;
-
-    let isDragging = false;
-    let dragStartX = 0, dragStartY = 0, dragPhotoX0 = 0, dragPhotoY0 = 0;
+    let isDragging = false, dragStartX = 0, dragStartY = 0, dragPhotoX0 = 0, dragPhotoY0 = 0;
     let lastTouchDist = null;
 
     const canvas = document.getElementById('card-canvas');
-    const ctx    = canvas.getContext('2d', { willReadFrequently: true });
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
-    // ═══════════════════════════════════════════════════════════════════
-    //  Helpers (exact Python logic)
-    // ═══════════════════════════════════════════════════════════════════
     function makeTempCanvas(w, h) {
       const c = document.createElement('canvas');
       c.width = w; c.height = h;
@@ -250,63 +220,49 @@
     }
 
     function getPhotoDims(img) {
-      return {
-        w: img.naturalWidth || img.width || 0,
-        h: img.naturalHeight || img.height || 0
-      };
+      return { w: img.naturalWidth || img.width || 0, h: img.naturalHeight || img.height || 0 };
     }
 
     function buildRightCanvas() {
       const { x: rx, y: ry, w: rw, h: rh } = RIGHT_RECT;
       const c = makeTempCanvas(rw, rh);
       const dims = getPhotoDims(photoImg);
-      const pw = dims.w * photoScale;
-      const ph = dims.h * photoScale;
-      c.getContext('2d').drawImage(photoImg, photoX - rx, photoY - ry, pw, ph);
+      c.getContext('2d').drawImage(photoImg, photoX - rx, photoY - ry, dims.w * photoScale, dims.h * photoScale);
       return c;
     }
 
     function buildNegative(rightCanvas) {
       const { w, h } = LEFT_RECT;
-
-      // 1. Copy / resize to left size
       const s1 = makeTempCanvas(w, h);
       s1.getContext('2d').drawImage(rightCanvas, 0, 0, w, h);
 
-      // 2. Invert
       const s2 = makeTempCanvas(w, h);
       const c2 = s2.getContext('2d', { willReadFrequently: true });
       c2.drawImage(s1, 0, 0);
       const id2 = c2.getImageData(0, 0, w, h);
-      const d2 = id2.data;
-      for (let i = 0; i < d2.length; i += 4) {
-        d2[i] = 255 - d2[i];
-        d2[i+1] = 255 - d2[i+1];
-        d2[i+2] = 255 - d2[i+2];
+      for (let i = 0; i < id2.data.length; i += 4) {
+        id2.data[i] = 255 - id2.data[i];
+        id2.data[i+1] = 255 - id2.data[i+1];
+        id2.data[i+2] = 255 - id2.data[i+2];
       }
       c2.putImageData(id2, 0, 0);
 
-      // 3. Gaussian blur 1.5px
       const s3 = makeTempCanvas(w, h);
       const c3 = s3.getContext('2d');
       c3.filter = 'blur(1.5px)';
       c3.drawImage(s2, 0, 0);
       c3.filter = 'none';
 
-      // 4. Mirror
       const s4 = makeTempCanvas(w, h);
       const c4 = s4.getContext('2d', { willReadFrequently: true });
-      c4.translate(w, 0);
-      c4.scale(-1, 1);
+      c4.translate(w, 0); c4.scale(-1, 1);
       c4.drawImage(s3, 0, 0);
       c4.setTransform(1, 0, 0, 1, 0, 0);
 
-      // 5. Blue-white LUT (exact Python)
       const id4 = c4.getImageData(0, 0, w, h);
-      const d4 = id4.data;
-      for (let i = 0; i < d4.length; i += 4) {
-        const lum = Math.round((d4[i] + d4[i+1] + d4[i+2]) / 3);
-        d4[i] = lum; d4[i+1] = lum; d4[i+2] = 255;
+      for (let i = 0; i < id4.data.length; i += 4) {
+        const lum = Math.round((id4.data[i] + id4.data[i+1] + id4.data[i+2]) / 3);
+        id4.data[i] = lum; id4.data[i+1] = lum; id4.data[i+2] = 255;
       }
       c4.putImageData(id4, 0, 0);
       return s4;
@@ -319,7 +275,8 @@
       ctx.save();
       ctx.textBaseline = 'top';
       ctx.fillStyle = 'rgb(255, 30, 30)';
-      ctx.font = `bold ${NAME_FONT_SZ}px "Arial Narrow", "Arial Narrow Bold", Arial, sans-serif`;
+      // Reliable bold condensed font stack (Arial Narrow fallback)
+      ctx.font = `bold ${NAME_FONT_SZ}px "Arial Narrow", "Arial Black", Impact, "Helvetica Neue", Arial, sans-serif`;
 
       const textW = ctx.measureText(name).width;
       const maxW = NAME_RECT.w;
@@ -335,24 +292,19 @@
     }
 
     function render() {
-      // 1. Black base
       ctx.fillStyle = '#000000';
       ctx.fillRect(0, 0, CW, CH);
 
       if (photoImg) {
         const right = buildRightCanvas();
-        // 2. Negative (left) — now correctly sized, won't cover right photo
         ctx.drawImage(buildNegative(right), LEFT_RECT.x, LEFT_RECT.y);
-        // 3. Normal (right)
         ctx.drawImage(right, RIGHT_RECT.x, RIGHT_RECT.y);
       }
 
-      // 4. Template on top
       if (templateImg) {
         ctx.drawImage(templateImg, 0, 0, CW, CH);
       }
 
-      // 5. Name last (top-right)
       if (templateImg || photoImg) {
         renderName();
       }
@@ -361,27 +313,20 @@
     function loop() { render(); requestAnimationFrame(loop); }
     loop();
 
-    // ═══════════════════════════════════════════════════════════════════
-    //  Demo (fixes missing landing image)
-    // ═══════════════════════════════════════════════════════════════════
     function createDemoPhoto() {
       const c = makeTempCanvas(225, 285);
       const cx = c.getContext('2d');
       cx.fillStyle = '#1e2937'; cx.fillRect(0, 0, 225, 285);
-      // Head
       cx.fillStyle = '#fed7aa';
       cx.beginPath(); cx.ellipse(112, 130, 72, 95, 0, 0, Math.PI * 2); cx.fill();
-      // Red hair
       cx.fillStyle = '#b91c1c';
       cx.beginPath(); cx.ellipse(112, 85, 85, 62, 0, 0, Math.PI * 2); cx.fill();
-      // Eyes
       cx.fillStyle = '#fff';
       cx.beginPath(); cx.ellipse(82, 118, 16, 10, 0, 0, Math.PI * 2); cx.fill();
       cx.beginPath(); cx.ellipse(142, 118, 16, 10, 0, 0, Math.PI * 2); cx.fill();
       cx.fillStyle = '#1e40af';
       cx.beginPath(); cx.ellipse(82, 118, 8, 8, 0, 0, Math.PI * 2); cx.fill();
       cx.beginPath(); cx.ellipse(142, 118, 8, 8, 0, 0, Math.PI * 2); cx.fill();
-      // Mouth
       cx.strokeStyle = '#9f1239'; cx.lineWidth = 3.5;
       cx.beginPath(); cx.arc(112, 165, 20, 0.2 * Math.PI, 0.8 * Math.PI); cx.stroke();
       return c;
@@ -391,17 +336,14 @@
       const demo = makeTempCanvas(CW, CH);
       const dctx = demo.getContext('2d');
 
-      // Dark futuristic background
       const grad = dctx.createLinearGradient(0, 0, 0, CH);
       grad.addColorStop(0, '#0a0a0f'); grad.addColorStop(1, '#1a1a2e');
       dctx.fillStyle = grad; dctx.fillRect(0, 0, CW, CH);
 
-      // Tech grid
       dctx.strokeStyle = '#334155'; dctx.lineWidth = 1;
       for (let x = 20; x < CW; x += 28) { dctx.beginPath(); dctx.moveTo(x, 0); dctx.lineTo(x, CH); dctx.stroke(); }
       for (let y = 20; y < CH; y += 28) { dctx.beginPath(); dctx.moveTo(0, y); dctx.lineTo(CW, y); dctx.stroke(); }
 
-      // Photo frames (cyan sci-fi)
       dctx.strokeStyle = '#22d3ee'; dctx.lineWidth = 6;
       dctx.strokeRect(LEFT_RECT.x - 5, LEFT_RECT.y - 5, LEFT_RECT.w + 10, LEFT_RECT.h + 10);
       dctx.strokeRect(RIGHT_RECT.x - 5, RIGHT_RECT.y - 5, RIGHT_RECT.w + 10, RIGHT_RECT.h + 10);
@@ -409,24 +351,20 @@
       dctx.strokeRect(LEFT_RECT.x, LEFT_RECT.y, LEFT_RECT.w, LEFT_RECT.h);
       dctx.strokeRect(RIGHT_RECT.x, RIGHT_RECT.y, RIGHT_RECT.w, RIGHT_RECT.h);
 
-      // Header
       dctx.fillStyle = '#e0f2fe'; dctx.font = 'bold 28px system-ui';
       dctx.fillText('MULTIPASS', 32, 52);
       dctx.font = '11px monospace'; dctx.fillStyle = '#64748b';
       dctx.fillText('FEDERAL REPUBLIC OF EARTH  •  5E-CLASS', 32, 70);
 
-      // Right labels
       dctx.fillStyle = '#22d3ee'; dctx.font = 'bold 13px system-ui';
       dctx.fillText('SUBJECT', 920, 52);
       dctx.fillStyle = '#f1f5f9'; dctx.font = '10px monospace';
       dctx.fillText('ID: 784392-5E', 920, 68);
 
-      // Bottom bar
       dctx.fillStyle = '#1e2937'; dctx.fillRect(0, 580, CW, 58);
       dctx.fillStyle = '#64748b'; dctx.font = '9px monospace';
       dctx.fillText('PROPERTY OF THE FEDERATION  •  DO NOT DUPLICATE  •  EXPIRES 12.31.2263', 28, 612);
 
-      // Barcode
       dctx.fillStyle = '#475569';
       for (let i = 0; i < 32; i++) {
         const bw = (i % 4 === 0) ? 3 : 1.5;
@@ -437,8 +375,7 @@
       document.getElementById('placeholder-img').style.display = 'none';
       document.getElementById('extra-controls').style.display = 'flex';
 
-      const nameInput = document.getElementById('nameInput');
-      nameInput.value = 'LEELOO DALLAS';
+      document.getElementById('nameInput').value = 'LEELOO DALLAS';
 
       photoImg = createDemoPhoto();
       photoScale = 0.95;
@@ -450,9 +387,6 @@
       photoY = RIGHT_RECT.y + (rh - ph) / 2;
     }
 
-    // ═══════════════════════════════════════════════════════════════════
-    //  Events
-    // ═══════════════════════════════════════════════════════════════════
     document.getElementById('demoBtn').addEventListener('click', loadDemo);
 
     function loadImage(file, cb) {
@@ -529,7 +463,6 @@
       }, 450);
     });
 
-    // Mouse / Touch / Keyboard (same as before)
     function toCanvas(clientX, clientY) {
       const r = canvas.getBoundingClientRect();
       return { x: (clientX - r.left) * (CW / r.width), y: (clientY - r.top) * (CH / r.height) };
@@ -596,7 +529,7 @@
 
     canvas.addEventListener('touchend', () => { isDragging = false; lastTouchDist = null; });
 
-    // Auto-load demo on first visit (fixes missing landing image)
+    // Auto-load demo
     setTimeout(() => {
       if (!templateImg) loadDemo();
     }, 700);

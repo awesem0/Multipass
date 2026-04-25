@@ -13,7 +13,7 @@
     .controls { display:flex; flex-direction:column; gap:8px; width:280px; }
     .button, label.button { padding:14px 20px; background:#3b82f6; color:white; border:none; font-size:15px; cursor:pointer; width:100%; text-align:center; box-sizing:border-box; }
     .button:hover { background:#2563eb; }
-    input, label { width:100%; }
+    input[type="text"], input[type="range"] { width:100%; padding:12px; font-size:18px; box-sizing:border-box; }
     .disclaimer { font-size:12px; text-align:center; color:#ddd; }
     #additional-controls { display:none; flex-direction:column; gap:8px; }
     .video-tutorial { margin:15px 0 30px 0; text-align:center; width:100%; max-width:840px; }
@@ -50,6 +50,11 @@
     let nameLetters = [];
     let letterMap = {};
 
+    // Hardcoded rects for Multipass (540x340) - matches your Python script
+    const LEFT_RECT = { x: 30, y: 70, w: 230, h: 190 };
+    const RIGHT_RECT = { x: 280, y: 70, w: 230, h: 190 };
+    const NAME_RECT = { x: 30, y: 275, w: 480, h: 50 };
+
     function preload() {
       const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ ';
       for (let char of letters) {
@@ -63,32 +68,90 @@
       c.parent('canvas-container');
     }
 
+    function applyBlueLUT(img) {
+      img.loadPixels();
+      for (let i = 0; i < img.pixels.length; i += 4) {
+        let gray = (img.pixels[i] + img.pixels[i+1] + img.pixels[i+2]) / 3;
+        img.pixels[i] = gray;
+        img.pixels[i+1] = gray;
+        img.pixels[i+2] = 255;
+      }
+      img.updatePixels();
+      return img;
+    }
+
+    function buildNegative(normalImg, w, h) {
+      let resized = normalImg.get();
+      resized.resize(w, h);
+      resized.filter(INVERT);
+      resized.filter(BLUR, 1.5);
+      
+      // Mirror horizontally
+      let flipped = createImage(w, h);
+      for (let x = 0; x < w; x++) {
+        for (let y = 0; y < h; y++) {
+          flipped.set(x, y, resized.get(w - 1 - x, y));
+        }
+      }
+      flipped.updatePixels();
+      return applyBlueLUT(flipped);
+    }
+
     function draw() {
       clear();
-      if (templateImg) image(templateImg, 0, 0, width, height);
-
-      if (photoImg) {
-        push();
-        translate(width/2 + photoX, height/2 + photoY);
-        scale(photoScale);
-        imageMode(CENTER);
-        image(photoImg, 0, 0);
-        pop();
+      
+      // 1. Black base
+      background(0);
+      
+      if (photoImg && templateImg) {
+        // Right side - normal photo (clipped)
+        let rx = RIGHT_RECT.x, ry = RIGHT_RECT.y, rw = RIGHT_RECT.w, rh = RIGHT_RECT.h;
+        let pw = photoImg.width * photoScale;
+        let ph = photoImg.height * photoScale;
+        
+        // Clip photo to right rect
+        let sx = max(0, rx - (width/2 + photoX - pw/2));
+        let sy = max(0, ry - (height/2 + photoY - ph/2));
+        let sw = min(pw, rw);
+        let sh = min(ph, rh);
+        
+        if (sw > 0 && sh > 0) {
+          // Draw normal photo on right
+          image(photoImg, rx, ry, rw, rh, sx, sy, sw, sh);
+        }
+        
+        // Left side - negative blue LUT (mirrored)
+        let neg = buildNegative(photoImg, rw, rh);
+        image(neg, LEFT_RECT.x, LEFT_RECT.y);
       }
-
-      // Name
+      
+      // 2. Template on top
+      if (templateImg) {
+        image(templateImg, 0, 0, width, height);
+      }
+      
+      // 3. Name (red + nudge + squish)
       if (nameLetters.length > 0) {
-        let x = width * 0.04;
-        let y = height * 0.93;
-        let letterH = 32;
+        let x = NAME_RECT.x + 2;  // NAME_X_NUDGE
+        let y = NAME_RECT.y + 15; // NAME_Y_NUDGE
+        let letterH = 28;
         let gap = 1.5;
+        
         for (let letter of nameLetters) {
-          if (letter === ' ') { x += 20; continue; }
+          if (letter === ' ') { x += 18; continue; }
           let img = letterMap[letter];
           if (img) {
             let s = letterH / img.height;
-            image(img, x, y - letterH, img.width * s, letterH);
-            x += img.width * s + gap;
+            let tw = img.width * s;
+            
+            // Squish if too wide
+            if (x + tw > NAME_RECT.x + NAME_RECT.w) {
+              s = (NAME_RECT.x + NAME_RECT.w - x) / img.width;
+              tw = NAME_RECT.x + NAME_RECT.w - x;
+            }
+            
+            image(img, x, y - letterH, tw, letterH);
+            x += tw + gap;
           }
         }
       }
@@ -112,7 +175,8 @@
         let url = URL.createObjectURL(file);
         loadImage(url, img => {
           photoImg = img;
-          photoX = 0; photoY = 0; photoScale = 0.8;
+          photoX = RIGHT_RECT.x + RIGHT_RECT.w/2 - (img.width * photoScale)/2;
+          photoY = RIGHT_RECT.y + RIGHT_RECT.h/2 - (img.height * photoScale)/2;
           document.getElementById('sizeSlider').value = 1.4;
           URL.revokeObjectURL(url);
         });
@@ -131,8 +195,8 @@
       saveCanvas(name, 'png');
     });
 
-    function mousePressed() { if (photoImg) { isDragging = true; dragOffsetX = mouseX - (width/2 + photoX); dragOffsetY = mouseY - (height/2 + photoY); }}
-    function mouseDragged() { if (isDragging) { photoX = mouseX - width/2 - dragOffsetX; photoY = mouseY - height/2 - dragOffsetY; }}
+    function mousePressed() { if (photoImg) { isDragging = true; dragOffsetX = mouseX - photoX; dragOffsetY = mouseY - photoY; }}
+    function mouseDragged() { if (isDragging) { photoX = mouseX - dragOffsetX; photoY = mouseY - dragOffsetY; }}
     function mouseReleased() { isDragging = false; }
     function mouseWheel(e) { if (photoImg) photoScale *= e.delta > 0 ? 0.95 : 1.05; }
 

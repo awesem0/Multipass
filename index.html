@@ -4,292 +4,582 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Multipass Card Customizer</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.2/p5.min.js"></script>
   <style>
-    body { margin:0; padding:0; background:#111; color:#fff; font-family:Arial, sans-serif; padding-top:60px; }
-    .main-container { display:flex; flex-direction:column; align-items:center; gap:15px; padding:20px; }
-    .tool-row { display:flex; flex-wrap:wrap; justify-content:center; gap:20px; width:100%; max-width:840px; }
-    #canvas-container { width:540px; height:340px; background:#000; border-radius:20px; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,0.5); }
-    .controls { display:flex; flex-direction:column; gap:8px; width:280px; }
-    .button, label.button { padding:14px 20px; background:#3b82f6; color:white; border:none; font-size:15px; cursor:pointer; width:100%; text-align:center; box-sizing:border-box; border-radius:8px; font-weight:bold; }
-    .button:hover { background:#2563eb; }
-    input[type="text"], input[type="range"] { width:100%; padding:12px; font-size:18px; box-sizing:border-box; border-radius:8px; border:2px solid #333; background:#1c1c1c; color:#fff; }
-    .disclaimer { font-size:12px; text-align:center; color:#888; margin-top:8px; }
-    #additional-controls { display:none; flex-direction:column; gap:10px; }
-    .video-tutorial { margin:15px 0 30px 0; text-align:center; width:100%; max-width:840px; }
-    .video-tutorial iframe { width:100%; max-width:840px; height:473px; border:none; border-radius:12px; }
-    .section-label { font-size:11px; color:#666; margin-bottom:4px; text-transform:uppercase; letter-spacing:1px; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #111;
+      color: #f0f0f0;
+      font-family: Arial, sans-serif;
+      min-height: 100vh;
+      padding: 40px 20px 60px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+    }
+
+    h1 {
+      font-size: 13px;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: #555;
+      font-weight: 400;
+    }
+
+    .tool-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+      width: 100%;
+      max-width: 860px;
+    }
+
+    /* ── Canvas ─────────────────────────────── */
+    #canvas-wrap {
+      position: relative;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 0 0 1px #2a2a2a, 0 24px 60px rgba(0,0,0,0.7);
+      flex-shrink: 0;
+    }
+
+    #card-canvas {
+      display: block;
+      cursor: grab;
+      user-select: none;
+    }
+    #card-canvas:active { cursor: grabbing; }
+
+    /* Placeholder shown before template upload */
+    #placeholder {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: #1a1a1a;
+      pointer-events: none;
+    }
+    #placeholder svg { opacity: 0.25; }
+    #placeholder span { font-size: 12px; letter-spacing: 0.15em; color: #444; text-transform: uppercase; }
+    #placeholder.hidden { display: none; }
+
+    /* ── Controls ───────────────────────────── */
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 270px;
+    }
+
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 13px 18px;
+      background: #3b82f6;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      text-align: center;
+      text-decoration: none;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn:hover { background: #2563eb; }
+    .btn.secondary { background: #262626; }
+    .btn.secondary:hover { background: #333; }
+
+    label.btn { display: block; }
+
+    .divider {
+      height: 1px;
+      background: #2a2a2a;
+      margin: 4px 0;
+    }
+
+    #extra-controls {
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 11px 14px;
+      font-size: 16px;
+      font-weight: 600;
+      background: #1c1c1c;
+      color: #f0f0f0;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input[type="text"]:focus { border-color: #3b82f6; }
+    input[type="text"]::placeholder { color: #444; font-weight: 400; }
+
+    .slider-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .slider-row label {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #555;
+    }
+    input[type="range"] {
+      width: 100%;
+      accent-color: #3b82f6;
+      cursor: pointer;
+    }
+
+    .hint {
+      font-size: 11px;
+      color: #444;
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    /* ── Video ──────────────────────────────── */
+    .video-wrap {
+      width: 100%;
+      max-width: 860px;
+      border-radius: 12px;
+      overflow: hidden;
+      aspect-ratio: 16/9;
+      box-shadow: 0 0 0 1px #2a2a2a;
+    }
+    .video-wrap iframe {
+      width: 100%; height: 100%;
+      border: none; display: block;
+    }
   </style>
 </head>
 <body>
-  <div class="main-container">
-    <div class="tool-row">
-      <div id="canvas-container"></div>
-      <div class="controls">
-        <a href="https://dailyprintdelights.etsy.com" target="_blank" class="button">BUY TEMPLATES</a>
-        
-        <label class="button">UPLOAD TEMPLATE 
-          <input type="file" id="templateUpload" accept="image/*" style="display:none;">
-        </label>
-        
-        <div id="additional-controls">
-          <div class="section-label">PHOTO</div>
-          <label class="button">UPLOAD PHOTO 
-            <input type="file" id="photoUpload" accept="image/*" style="display:none;">
-          </label>
-          
-          <div class="section-label">NAME (UPPERCASE)</div>
-          <input type="text" id="nameInput" placeholder="LEELOO DALLAS" maxlength="40">
-          
-          <div class="section-label">PHOTO SIZE</div>
-          <input type="range" id="sizeSlider" min="0.3" max="3.0" step="0.01" value="1.0">
-          
-          <button id="download" class="button" style="background:#22c55e; margin-top:8px;">DOWNLOAD CARD</button>
-          
-          <div class="disclaimer">Cosplay tool • No data saved • Matches Python version exactly</div>
-        </div>
+
+  <h1>Multipass Card Customizer</h1>
+
+  <div class="tool-row">
+
+    <!-- Canvas -->
+    <div id="canvas-wrap">
+      <canvas id="card-canvas" width="540" height="340"></canvas>
+      <div id="placeholder">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.2">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+        </svg>
+        <span>Upload a template to begin</span>
       </div>
     </div>
 
-    <div class="video-tutorial">
-      <iframe src="https://www.youtube.com/embed/USozvRE2INs" frameborder="0" allowfullscreen></iframe>
+    <!-- Controls -->
+    <div class="controls">
+      <a href="https://dailyprintdelights.etsy.com" target="_blank" class="btn">Buy Templates</a>
+
+      <label class="btn secondary">
+        Upload Template
+        <input type="file" id="templateUpload" accept="image/*" style="display:none">
+      </label>
+
+      <div id="extra-controls">
+        <div class="divider"></div>
+
+        <label class="btn secondary">
+          Upload Photo
+          <input type="file" id="photoUpload" accept="image/*" style="display:none">
+        </label>
+
+        <input type="text" id="nameInput" placeholder="Enter full name" maxlength="40" autocomplete="off">
+
+        <div class="slider-row">
+          <label>Photo size</label>
+          <input type="range" id="sizeSlider" min="0.05" max="5" step="0.01" value="1.0">
+        </div>
+
+        <button id="downloadBtn" class="btn">Download Card</button>
+
+        <p class="hint">Drag photo to reposition · Scroll to zoom<br>This is a cosplay tool — no data is saved.</p>
+      </div>
     </div>
+
+  </div>
+
+  <!-- Tutorial -->
+  <div class="video-wrap">
+    <iframe src="https://www.youtube.com/embed/USozvRE2INs" allowfullscreen></iframe>
   </div>
 
   <script>
+    // ─────────────────────────────────────────────────────────────
+    //  Config — matches Python exactly
+    // ─────────────────────────────────────────────────────────────
+    const LEFT_RECT   = { x: 30,  y: 70,  w: 230, h: 190 };
+    const RIGHT_RECT  = { x: 280, y: 70,  w: 230, h: 190 };
+    const NAME_RECT   = { x: 30,  y: 275, w: 480, h: 50  };
+
+    // Python: paste_x = name_rect[0] - 8 + NAME_X_NUDGE  → 30 - 8 + 2  = 24
+    //         paste_y = name_rect[1] - 10 + NAME_Y_NUDGE → 275 - 10 + 15 = 280
+    const NAME_PASTE_X = 24;
+    const NAME_PASTE_Y = 280;
+    const NAME_FONT_SIZE = 65;
+
+    // ─────────────────────────────────────────────────────────────
+    //  State
+    // ─────────────────────────────────────────────────────────────
     let templateImg = null;
-    let photoImg = null;
-    let photoX = 0, photoY = 0, photoScale = 1.0;
-    let isDragging = false, dragOffsetX = 0, dragOffsetY = 0;
+    let photoImg    = null;
+    let photoX      = 0;      // top-left of photo in canvas coords (like Python)
+    let photoY      = 0;
+    let photoScale  = 1.0;
 
-    // Exact rects matching Python multipass_corners.txt (540x340 canvas)
-    const LEFT_RECT  = { x: 30, y: 70, w: 230, h: 190 };
-    const RIGHT_RECT = { x: 280, y: 70, w: 230, h: 190 };
-    const NAME_RECT  = { x: 30, y: 275, w: 480, h: 50 };
+    let isDragging  = false;
+    let dragStartX  = 0, dragStartY  = 0;
+    let dragPhotoX0 = 0, dragPhotoY0 = 0;
 
-    const NAME_X_NUDGE = 2;
-    const NAME_Y_NUDGE = 15;
+    // ─────────────────────────────────────────────────────────────
+    //  Canvas setup
+    // ─────────────────────────────────────────────────────────────
+    const canvas = document.getElementById('card-canvas');
+    const ctx    = canvas.getContext('2d', { willReadFrequently: true });
 
-    function preload() {
-      // Load placeholder Leeloo card on landing (matches your uploaded file)
-      loadImage(
-        'https://raw.githubusercontent.com/awesem0/Multipass/main/LEELOO%20DALLAS_multipass_card.png',
-        img => {
-          templateImg = img;
-          document.getElementById('additional-controls').style.display = 'flex';
-          console.log('%c[Multipass] Default Leeloo template loaded as placeholder', 'color:#3b82f6');
-        },
-        () => {
-          console.log('%c[Multipass] No default template found — upload one to start', 'color:#f59e0b');
-        }
-      );
+    // ─────────────────────────────────────────────────────────────
+    //  Helpers
+    // ─────────────────────────────────────────────────────────────
+    function makeTempCanvas(w, h) {
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      return c;
     }
 
-    function setup() {
-      let c = createCanvas(540, 340);
-      c.parent('canvas-container');
-      pixelDensity(1);
+    /**
+     * Returns a canvas (RIGHT_RECT.w × RIGHT_RECT.h) containing the
+     * photo clipped to the right rect — identical to Python's normal_patch.
+     */
+    function buildRightCanvas() {
+      const { x: rx, y: ry, w: rw, h: rh } = RIGHT_RECT;
+      const c   = makeTempCanvas(rw, rh);
+      const cx  = c.getContext('2d');
+      const pw  = photoImg.naturalWidth  * photoScale;
+      const ph  = photoImg.naturalHeight * photoScale;
+      // offset of photo relative to rect's top-left
+      cx.drawImage(photoImg, photoX - rx, photoY - ry, pw, ph);
+      return c;
     }
 
-    function buildNegative(normalImg, targetW, targetH) {
-      let resized = normalImg.get();
-      resized.resize(targetW, targetH);
-      resized.filter(INVERT);
-      resized.filter(BLUR, 1.5);
+    /**
+     * Replicates Python's build_negative():
+     *   1. Resize src to LEFT_RECT dimensions (same size here, 230×190)
+     *   2. Invert (ImageOps.invert)
+     *   3. Gaussian blur radius 1.5
+     *   4. Mirror horizontally (ImageOps.mirror)
+     *   5. Blue-white LUT: R = G = luminance, B = 255
+     */
+    function buildNegative(rightCanvas) {
+      const { w, h } = LEFT_RECT;
 
-      let flipped = createImage(targetW, targetH);
-      flipped.loadPixels();
-      resized.loadPixels();
-      for (let x = 0; x < targetW; x++) {
-        for (let y = 0; y < targetH; y++) {
-          let srcX = targetW - 1 - x;
-          let srcIdx = (y * targetW + srcX) * 4;
-          let dstIdx = (y * targetW + x) * 4;
-          flipped.pixels[dstIdx]     = resized.pixels[srcIdx];
-          flipped.pixels[dstIdx + 1] = resized.pixels[srcIdx + 1];
-          flipped.pixels[dstIdx + 2] = resized.pixels[srcIdx + 2];
-          flipped.pixels[dstIdx + 3] = resized.pixels[srcIdx + 3];
-        }
+      // 1. Copy / resize (src is already 230×190 — same dims)
+      const s1  = makeTempCanvas(w, h);
+      s1.getContext('2d').drawImage(rightCanvas, 0, 0, w, h);
+
+      // 2. Invert
+      const s2  = makeTempCanvas(w, h);
+      const c2  = s2.getContext('2d', { willReadFrequently: true });
+      c2.drawImage(s1, 0, 0);
+      const id2 = c2.getImageData(0, 0, w, h);
+      const d2  = id2.data;
+      for (let i = 0; i < d2.length; i += 4) {
+        d2[i]   = 255 - d2[i];
+        d2[i+1] = 255 - d2[i+1];
+        d2[i+2] = 255 - d2[i+2];
+        // alpha unchanged
       }
-      flipped.updatePixels();
+      c2.putImageData(id2, 0, 0);
 
-      flipped.loadPixels();
-      for (let i = 0; i < flipped.pixels.length; i += 4) {
-        let gray = (flipped.pixels[i] + flipped.pixels[i + 1] + flipped.pixels[i + 2]) / 3;
-        flipped.pixels[i] = gray;
-        flipped.pixels[i + 1] = gray;
-        flipped.pixels[i + 2] = 255;
+      // 3. Gaussian blur 1.5 px (via CSS filter on a fresh canvas)
+      const s3 = makeTempCanvas(w, h);
+      const c3 = s3.getContext('2d');
+      c3.filter = 'blur(1.5px)';
+      c3.drawImage(s2, 0, 0);
+      c3.filter = 'none';
+
+      // 4. Mirror horizontally
+      const s4 = makeTempCanvas(w, h);
+      const c4 = s4.getContext('2d', { willReadFrequently: true });
+      c4.translate(w, 0);
+      c4.scale(-1, 1);
+      c4.drawImage(s3, 0, 0);
+      c4.setTransform(1, 0, 0, 1, 0, 0);
+
+      // 5. Blue-white LUT: R = G = luminance, B = 255
+      const id4 = c4.getImageData(0, 0, w, h);
+      const d4  = id4.data;
+      for (let i = 0; i < d4.length; i += 4) {
+        const lum = Math.round((d4[i] + d4[i+1] + d4[i+2]) / 3);
+        d4[i]   = lum;   // R
+        d4[i+1] = lum;   // G
+        d4[i+2] = 255;   // B always full
+        // alpha unchanged
       }
-      flipped.updatePixels();
+      c4.putImageData(id4, 0, 0);
 
-      return flipped;
+      return s4;
     }
 
-    function draw() {
-      background(0);
+    /**
+     * Render the name exactly as Python does:
+     *  - Font: Arial Narrow Bold, 65 px
+     *  - Colour: rgb(255, 30, 30)
+     *  - Top-left at (NAME_PASTE_X, NAME_PASTE_Y)
+     *  - Squish horizontally if wider than NAME_RECT.w
+     */
+    function renderName() {
+      const name = document.getElementById('nameInput').value.toUpperCase().trim();
+      if (!name) return;
 
-      if (photoImg && templateImg) {
-        // RIGHT: Normal photo (hard-clipped)
-        let rx = RIGHT_RECT.x, ry = RIGHT_RECT.y, rw = RIGHT_RECT.w, rh = RIGHT_RECT.h;
-        let pw = photoImg.width * photoScale;
-        let ph = photoImg.height * photoScale;
-        let px = photoX, py = photoY;
+      ctx.save();
+      ctx.textBaseline = 'top';
+      ctx.fillStyle    = 'rgb(255, 30, 30)';
+      // Arial Narrow is close enough on all platforms; fallback gracefully
+      ctx.font = `bold ${NAME_FONT_SIZE}px "Arial Narrow", "Arial Narrow Bold", Arial, sans-serif`;
 
-        let left = Math.max(px, rx);
-        let top  = Math.max(py, ry);
-        let right = Math.min(px + pw, rx + rw);
-        let bottom = Math.min(py + ph, ry + rh);
+      const maxW  = NAME_RECT.w;
+      const textW = ctx.measureText(name).width;
 
-        if (left < right && top < bottom) {
-          let dW = right - left;
-          let dH = bottom - top;
-          let sX = (left - px) / photoScale;
-          let sY = (top - py) / photoScale;
-          let sW = dW / photoScale;
-          let sH = dH / photoScale;
-          image(photoImg, left, top, dW, dH, sX, sY, sW, sH);
-        }
-
-        // LEFT: Negative built from EXACT positioned patch (matches Python)
-        let normalPatch = createGraphics(rw, rh);
-        normalPatch.background(0);
-
-        let relPx = px - rx;
-        let relPy = py - ry;
-
-        let pleft = Math.max(relPx, 0);
-        let ptop  = Math.max(relPy, 0);
-        let pright = Math.min(relPx + pw, rw);
-        let pbottom = Math.min(relPy + ph, rh);
-
-        if (pleft < pright && ptop < pbottom) {
-          let pdW = pright - pleft;
-          let pdH = pbottom - ptop;
-          let psX = (pleft - relPx) / photoScale;
-          let psY = (ptop - relPy) / photoScale;
-          let psW = pdW / photoScale;
-          let psH = pdH / photoScale;
-          normalPatch.image(photoImg, pleft, ptop, pdW, pdH, psX, psY, psW, psH);
-        }
-
-        let neg = buildNegative(normalPatch, rw, rh);
-        image(neg, LEFT_RECT.x, LEFT_RECT.y);
-        normalPatch.remove();
+      if (textW > maxW) {
+        // Squish: scale X only, like Python's text_img.resize((max_w, t_h))
+        ctx.translate(NAME_PASTE_X, NAME_PASTE_Y);
+        ctx.scale(maxW / textW, 1);
+        ctx.fillText(name, 0, 0);
+      } else {
+        ctx.fillText(name, NAME_PASTE_X, NAME_PASTE_Y);
       }
 
+      ctx.restore();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  Main render — matches Python's get_display_image() order
+    //    1. Black base
+    //    2. Negative  (left rect, under template)
+    //    3. Normal photo (right rect, under template)
+    //    4. Template on top
+    //    5. Name on top of everything
+    // ─────────────────────────────────────────────────────────────
+    function render() {
+      // 1. Black base
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, 540, 340);
+
+      if (photoImg) {
+        const rightCanvas = buildRightCanvas();
+
+        // 2. Negative → left rect
+        const negCanvas = buildNegative(rightCanvas);
+        ctx.drawImage(negCanvas, LEFT_RECT.x, LEFT_RECT.y);
+
+        // 3. Normal photo → right rect
+        ctx.drawImage(rightCanvas, RIGHT_RECT.x, RIGHT_RECT.y);
+      }
+
+      // 4. Template on top (alpha-composited, like Python's alpha_composite)
       if (templateImg) {
-        image(templateImg, 0, 0, width, height);
+        ctx.drawImage(templateImg, 0, 0, 540, 340);
       }
 
-      // Name: red, nudged, auto-squished (exact Python)
-      let nameInput = document.getElementById('nameInput');
-      if (nameInput) {
-        let name = nameInput.value.toUpperCase().trim();
-        if (name.length > 0) {
-          fill(255, 30, 30);
-          noStroke();
-          textAlign(LEFT, TOP);
-          textFont('Arial');
-          textStyle(BOLD);
-
-          let fontSize = 32;
-          textSize(fontSize);
-          let maxW = NAME_RECT.w;
-
-          while (textWidth(name) > maxW && fontSize > 12) {
-            fontSize--;
-            textSize(fontSize);
-          }
-
-          let nx = NAME_RECT.x + NAME_X_NUDGE;
-          let ny = NAME_RECT.y + NAME_Y_NUDGE;
-          text(name, nx, ny);
-        }
+      // 5. Name above everything
+      if (templateImg || photoImg) {
+        renderName();
       }
     }
 
-    // Event listeners (unchanged + improved)
+    // Render loop
+    function loop() { render(); requestAnimationFrame(loop); }
+    loop();
+
+    // ─────────────────────────────────────────────────────────────
+    //  Template upload
+    // ─────────────────────────────────────────────────────────────
     document.getElementById('templateUpload').addEventListener('change', e => {
-      let file = e.target.files[0];
-      if (file) {
-        let url = URL.createObjectURL(file);
-        loadImage(url, img => {
-          templateImg = img;
-          document.getElementById('additional-controls').style.display = 'flex';
-          URL.revokeObjectURL(url);
-        });
-      }
+      const file = e.target.files[0];
+      if (!file) return;
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        templateImg = img;
+        URL.revokeObjectURL(url);
+        document.getElementById('placeholder').classList.add('hidden');
+        document.getElementById('extra-controls').style.display = 'flex';
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); alert('Could not load template image.'); };
+      img.src = url;
     });
 
+    // ─────────────────────────────────────────────────────────────
+    //  Photo upload — centres in right rect at scale 1.0 (like Python)
+    // ─────────────────────────────────────────────────────────────
     document.getElementById('photoUpload').addEventListener('change', e => {
-      let file = e.target.files[0];
-      if (file) {
-        let url = URL.createObjectURL(file);
-        loadImage(url, img => {
-          photoImg = img;
-          photoScale = 1.0;
-          document.getElementById('sizeSlider').value = 1.0;
+      const file = e.target.files[0];
+      if (!file) return;
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        photoImg   = img;
+        photoScale = 1.0;
+        document.getElementById('sizeSlider').value = 1.0;
 
-          if (RIGHT_RECT) {
-            let rw = RIGHT_RECT.w;
-            let rh = RIGHT_RECT.h;
-            photoX = RIGHT_RECT.x + Math.floor((rw - img.width) / 2);
-            photoY = RIGHT_RECT.y + Math.floor((rh - img.height) / 2);
-          }
-          URL.revokeObjectURL(url);
-        });
-      }
+        // Center in right rect (Python: right_rect[0] + (rw - photo_img.width) // 2)
+        const rw = RIGHT_RECT.w, rh = RIGHT_RECT.h;
+        photoX = RIGHT_RECT.x + (rw - img.naturalWidth)  / 2;
+        photoY = RIGHT_RECT.y + (rh - img.naturalHeight) / 2;
+
+        URL.revokeObjectURL(url);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); alert('Could not load photo.'); };
+      img.src = url;
     });
 
+    // ─────────────────────────────────────────────────────────────
+    //  Name input
+    // ─────────────────────────────────────────────────────────────
+    document.getElementById('nameInput').addEventListener('input', () => { /* loop handles it */ });
+
+    // ─────────────────────────────────────────────────────────────
+    //  Size slider — synced with scroll/zoom
+    // ─────────────────────────────────────────────────────────────
     document.getElementById('sizeSlider').addEventListener('input', e => {
       photoScale = parseFloat(e.target.value);
     });
 
-    document.getElementById('download').addEventListener('click', () => {
-      let name = (document.getElementById('nameInput').value.trim().toUpperCase() || 'MULTIPASS').replace(/ /g, '_');
-      saveCanvas(name + '_multipass_card', 'png');
+    function syncSlider() {
+      const slider = document.getElementById('sizeSlider');
+      slider.value = Math.min(parseFloat(slider.max), Math.max(parseFloat(slider.min), photoScale));
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  Download
+    // ─────────────────────────────────────────────────────────────
+    document.getElementById('downloadBtn').addEventListener('click', () => {
+      render(); // ensure freshest frame
+      const name = document.getElementById('nameInput').value.trim().toUpperCase().replace(/ /g, '_') || 'MULTIPASS';
+      const link = document.createElement('a');
+      link.download = name + '_multipass_card.png';
+      link.href     = canvas.toDataURL('image/png');
+      link.click();
     });
 
-    function mousePressed() {
-      if (photoImg) {
-        isDragging = true;
-        dragOffsetX = mouseX - photoX;
-        dragOffsetY = mouseY - photoY;
-      }
-    }
-    function mouseDragged() {
-      if (isDragging && photoImg) {
-        photoX = mouseX - dragOffsetX;
-        photoY = mouseY - dragOffsetY;
-      }
-    }
-    function mouseReleased() { isDragging = false; }
-
-    function mouseWheel(e) {
-      if (photoImg) {
-        let factor = e.delta > 0 ? 0.95 : 1.05;
-        photoScale = Math.max(0.3, Math.min(3.0, photoScale * factor));
-        document.getElementById('sizeSlider').value = photoScale;
-        return false;
-      }
+    // ─────────────────────────────────────────────────────────────
+    //  Mouse drag — photo repositioning
+    // ─────────────────────────────────────────────────────────────
+    function canvasCoords(e) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width  / rect.width;
+      const scaleY = canvas.height / rect.height;
+      return {
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top)  * scaleY
+      };
     }
 
-    function keyPressed() {
+    canvas.addEventListener('mousedown', e => {
       if (!photoImg) return;
-      let step = 4;
-      if (keyCode === LEFT_ARROW)  photoX -= step;
-      if (keyCode === RIGHT_ARROW) photoX += step;
-      if (keyCode === UP_ARROW)    photoY -= step;
-      if (keyCode === DOWN_ARROW)  photoY += step;
-    }
+      isDragging  = true;
+      const pos   = canvasCoords(e);
+      dragStartX  = pos.x;
+      dragStartY  = pos.y;
+      dragPhotoX0 = photoX;
+      dragPhotoY0 = photoY;
+    });
 
-    function mouseClicked() {
-      if (photoImg && keyIsDown(16)) {
-        let rw = RIGHT_RECT.w, rh = RIGHT_RECT.h;
-        photoX = RIGHT_RECT.x + Math.floor((rw - photoImg.width * photoScale) / 2);
-        photoY = RIGHT_RECT.y + Math.floor((rh - photoImg.height * photoScale) / 2);
+    window.addEventListener('mousemove', e => {
+      if (!isDragging) return;
+      const pos = canvasCoords(e);
+      photoX = dragPhotoX0 + (pos.x - dragStartX);
+      photoY = dragPhotoY0 + (pos.y - dragStartY);
+    });
+
+    window.addEventListener('mouseup', () => { isDragging = false; });
+
+    // ─────────────────────────────────────────────────────────────
+    //  Scroll to zoom (like Python's mousewheel)
+    // ─────────────────────────────────────────────────────────────
+    canvas.addEventListener('wheel', e => {
+      if (!photoImg) return;
+      e.preventDefault();
+      const factor = e.deltaY > 0 ? 0.95 : 1.05;
+      photoScale   = Math.max(0.05, Math.min(20, photoScale * factor));
+      syncSlider();
+    }, { passive: false });
+
+    // ─────────────────────────────────────────────────────────────
+    //  Arrow keys for fine positioning (like Python)
+    // ─────────────────────────────────────────────────────────────
+    window.addEventListener('keydown', e => {
+      if (!photoImg) return;
+      const step = 5;
+      if (e.key === 'ArrowLeft')  { photoX -= step; e.preventDefault(); }
+      if (e.key === 'ArrowRight') { photoX += step; e.preventDefault(); }
+      if (e.key === 'ArrowUp')    { photoY -= step; e.preventDefault(); }
+      if (e.key === 'ArrowDown')  { photoY += step; e.preventDefault(); }
+    });
+
+    // ─────────────────────────────────────────────────────────────
+    //  Touch support (basic pinch-to-zoom + drag)
+    // ─────────────────────────────────────────────────────────────
+    let lastTouchDist = null;
+
+    canvas.addEventListener('touchstart', e => {
+      if (!photoImg) return;
+      if (e.touches.length === 1) {
+        isDragging  = true;
+        dragStartX  = e.touches[0].clientX;
+        dragStartY  = e.touches[0].clientY;
+        dragPhotoX0 = photoX;
+        dragPhotoY0 = photoY;
       }
-    }
+      if (e.touches.length === 2) {
+        lastTouchDist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+      }
+      e.preventDefault();
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', e => {
+      if (!photoImg) return;
+      if (e.touches.length === 1 && isDragging) {
+        const rect  = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        photoX = dragPhotoX0 + (e.touches[0].clientX - dragStartX) * scaleX;
+        photoY = dragPhotoY0 + (e.touches[0].clientY - dragStartY) * scaleY;
+      }
+      if (e.touches.length === 2 && lastTouchDist !== null) {
+        const dist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        photoScale = Math.max(0.05, Math.min(20, photoScale * (dist / lastTouchDist)));
+        lastTouchDist = dist;
+        syncSlider();
+      }
+      e.preventDefault();
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', () => {
+      isDragging    = false;
+      lastTouchDist = null;
+    });
   </script>
 </body>
 </html>

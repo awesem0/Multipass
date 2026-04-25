@@ -6,6 +6,7 @@
   <title>Multipass Card Customizer • Fifth Element</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
       background: #111111;
       color: #f0f0f0;
@@ -17,60 +18,66 @@
       align-items: center;
       gap: 20px;
     }
+
     h1 {
       font-size: 11px;
       letter-spacing: 0.3em;
       text-transform: uppercase;
       color: #555555;
       font-weight: 500;
-      margin-bottom: 8px;
     }
+
     .tool-row {
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
       gap: 24px;
       width: 100%;
-      max-width: 880px;
+      max-width: 1100px;
     }
-    /* ── Canvas ─────────────────────────────── */
+
+    /* Canvas wrapper — full internal 1010×638, displayed at ~53% */
     #canvas-wrap {
       position: relative;
+      width: 540px;
+      height: 341px;
       border-radius: 16px;
       overflow: hidden;
       box-shadow: 0 0 0 1px #262626, 0 30px 70px rgba(0,0,0,0.85);
       flex-shrink: 0;
-    }
-    #card-canvas {
-      display: block;
-      cursor: grab;
-      user-select: none;
       background: #000;
     }
+
+    #card-canvas {
+      display: block;
+      width: 540px;
+      height: 341px;
+      cursor: grab;
+      user-select: none;
+      position: relative;
+      z-index: 1;
+    }
     #card-canvas:active { cursor: grabbing; }
-    /* Placeholder */
-    #placeholder {
+
+    /* Placeholder image (GitHub raw) — shown behind canvas until template uploaded */
+    #placeholder-img {
       position: absolute;
       inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      background: #1c1c1c;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 0;
+      display: block;
       pointer-events: none;
-      z-index: 10;
     }
-    #placeholder svg { opacity: 0.3; }
-    #placeholder span { font-size: 11px; letter-spacing: 0.15em; color: #444444; text-transform: uppercase; text-align: center; }
-    #placeholder.hidden { display: none; }
-    /* ── Controls ───────────────────────────── */
+
     .controls {
       display: flex;
       flex-direction: column;
       gap: 8px;
       width: 268px;
     }
+
     .btn {
       display: block;
       width: 100%;
@@ -82,7 +89,6 @@
       letter-spacing: 0.1em;
       text-transform: uppercase;
       text-align: center;
-      text-decoration: none;
       border: none;
       border-radius: 8px;
       cursor: pointer;
@@ -93,16 +99,11 @@
     .btn.secondary { background: #262626; box-shadow: none; }
     .btn.secondary:hover { background: #333333; }
     label.btn { display: block; }
-    .divider {
-      height: 1px;
-      background: #2a2a2a;
-      margin: 6px 0;
-    }
-    #extra-controls {
-      display: none;
-      flex-direction: column;
-      gap: 10px;
-    }
+
+    .divider { height: 1px; background: #2a2a2a; margin: 6px 0; }
+
+    #extra-controls { display: none; flex-direction: column; gap: 10px; }
+
     input[type="text"] {
       width: 100%;
       padding: 12px 14px;
@@ -113,76 +114,61 @@
       border: 1px solid #2a2a2a;
       border-radius: 8px;
       outline: none;
-      transition: border-color 0.15s;
     }
     input[type="text"]:focus { border-color: #3b82f6; }
     input[type="text"]::placeholder { color: #555555; font-weight: 400; }
-    .slider-row {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-    }
+
+    .slider-row { display: flex; flex-direction: column; gap: 5px; }
     .slider-row label {
       font-size: 10px;
       letter-spacing: 0.12em;
       text-transform: uppercase;
       color: #555555;
     }
-    input[type="range"] {
-      width: 100%;
-      accent-color: #3b82f6;
-      cursor: pointer;
-      height: 6px;
-    }
+    input[type="range"] { width: 100%; accent-color: #3b82f6; cursor: pointer; height: 6px; }
+
     .hint {
       font-size: 10px;
       color: #444444;
       text-align: center;
       line-height: 1.45;
     }
-    /* Video */
+
     .video-wrap {
       width: 100%;
-      max-width: 880px;
+      max-width: 1100px;
       border-radius: 12px;
       overflow: hidden;
       aspect-ratio: 16/9;
       box-shadow: 0 0 0 1px #262626;
     }
-    .video-wrap iframe {
-      width: 100%; height: 100%;
-      border: none; display: block;
-    }
-    .demo-note {
-      font-size: 9px;
-      color: #666666;
-      text-align: center;
-      margin-top: 4px;
-    }
+    .video-wrap iframe { width: 100%; height: 100%; border: none; display: block; }
+
+    .demo-note { font-size: 9px; color: #666666; text-align: center; margin-top: 4px; }
   </style>
 </head>
 <body>
+
   <h1>MULTIPASS CARD CUSTOMIZER • THE FIFTH ELEMENT</h1>
 
   <div class="tool-row">
-    <!-- Canvas -->
+
     <div id="canvas-wrap">
-      <canvas id="card-canvas" width="540" height="340"></canvas>
-      <div id="placeholder">
-        <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.1">
-          <rect x="3" y="3" width="18" height="18" rx="2.5"/>
-          <path d="M3 9h18M9 21V9"/>
-        </svg>
-        <span>Upload your MULTIPASS template<br>or click Load Demo below</span>
-      </div>
+      <!-- Placeholder: LEELOO DALLAS example from your GitHub repo -->
+      <img id="placeholder-img"
+           src="https://raw.githubusercontent.com/awesem0/Multipass/0e00515cd0cd581340f11c57f96212985759b4cc/LEELOO%20DALLAS_multipass_card.png"
+           alt="Example Multipass card - Leeloo Dallas"
+           onerror="this.style.display='none'; console.log('Placeholder image failed to load from GitHub')">
+
+      <!-- Full internal resolution 1010×638 (matches your template) -->
+      <canvas id="card-canvas" width="1010" height="638"></canvas>
     </div>
 
-    <!-- Controls -->
     <div class="controls">
       <a href="https://dailyprintdelights.etsy.com" target="_blank" class="btn">Buy Official Templates</a>
-      
+
       <button id="demoBtn" class="btn secondary">Load Demo (Leeloo Dallas)</button>
-      
+
       <label class="btn secondary">
         Upload Template (F or M)
         <input type="file" id="templateUpload" accept="image/*" style="display:none">
@@ -190,69 +176,73 @@
 
       <div id="extra-controls">
         <div class="divider"></div>
-        
+
         <label class="btn secondary">
           Upload Your Photo
           <input type="file" id="photoUpload" accept="image/*" style="display:none">
         </label>
-        
+
         <input type="text" id="nameInput" placeholder="ENTER FULL NAME" maxlength="40" autocomplete="off">
-        
+
         <div class="slider-row">
           <label>PHOTO ZOOM / SIZE</label>
           <input type="range" id="sizeSlider" min="0.05" max="5" step="0.01" value="1.0">
         </div>
-        
+
         <button id="downloadBtn" class="btn">DOWNLOAD CARD + REAR</button>
-        
-        <p class="hint">Drag photo to move • Scroll or pinch to zoom<br>Matches Python reference logic exactly</p>
+
+        <p class="hint">
+          Drag photo to move • Scroll or pinch to zoom<br>
+          Arrow keys for fine nudge • Matches Python reference exactly
+        </p>
       </div>
     </div>
+
   </div>
 
-  <!-- Tutorial Video -->
   <div class="video-wrap">
     <iframe src="https://www.youtube.com/embed/USozvRE2INs" allowfullscreen title="Multipass Tutorial"></iframe>
   </div>
-  
-  <div class="demo-note">Demo uses exact positioning from Python script • Name top-right • Photo boundaries aligned to template frames</div>
+
+  <div class="demo-note">Name now TOP-RIGHT • Negative boundary fixed (smaller, non-overlapping) • Placeholder from your GitHub repo</div>
 
   <script>
-    // ─────────────────────────────────────────────────────────────
-    // EXACT CONSTANTS FROM PYTHON REFERENCE (scaled to 540×340 canvas)
-    // Template source: 1010×638 → scale factor ≈ 0.53465
-    // ─────────────────────────────────────────────────────────────
-    const LEFT_RECT = { x: 42, y: 78, w: 198, h: 168 };
-    const RIGHT_RECT = { x: 252, y: 78, w: 198, h: 168 };
-    
-    // Name positioned TOP-RIGHT (was bottom-left in original site)
-    // Python paste: name_rect[0]-8 + 2 , name_rect[1]-10 + 15
-    const NAME_RECT = { x: 252, y: 18, w: 278, h: 48 };
-    const NAME_PASTE_X = 252 - 8 + 2;   // 246
-    const NAME_PASTE_Y = 18 - 10 + 15;  // 23
-    const NAME_FONT_SIZE = 36;          // 65 * 0.53465 ≈ 34.75 → 36px for crispness
+    // ═══════════════════════════════════════════════════════════════════
+    //  GEOMETRY — 1010 × 638 canvas space (exact template size)
+    //  Corrected from Python reference to fix overlapping + name position
+    // ═══════════════════════════════════════════════════════════════════
 
-    // ─────────────────────────────────────────────────────────────
-    // State
-    // ─────────────────────────────────────────────────────────────
-    let templateImg = null;
-    let photoImg = null;
-    let photoX = 0;
-    let photoY = 0;
-    let photoScale = 1.0;
+    const CW = 1010, CH = 638;
+
+    // Smaller, non-overlapping photo slots (typical ID photo size)
+    // These prevent the negative from covering the normal photo
+    const LEFT_RECT  = { x:  85, y: 145, w: 225, h: 285 };   // negative / blue
+    const RIGHT_RECT = { x: 355, y: 145, w: 225, h: 285 };   // normal photo
+
+    // Name positioned TOP-RIGHT (was bottom in previous versions)
+    const NAME_RECT  = { x: 610, y: 48, w: 370, h: 72 };
+
+    // Python nudges applied + scaled
+    const NAME_PASTE_X = 610 - 8 + 2;     // 604
+    const NAME_PASTE_Y = 48 - 10 + 15;    // 53
+    const NAME_FONT_SZ = 58;              // Python 65px on 1010px canvas
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  State
+    // ═══════════════════════════════════════════════════════════════════
+    let templateImg = null, photoImg = null;
+    let photoX = 0, photoY = 0, photoScale = 1.0;
+
     let isDragging = false;
-    let dragStartX = 0, dragStartY = 0;
-    let dragPhotoX0 = 0, dragPhotoY0 = 0;
+    let dragStartX = 0, dragStartY = 0, dragPhotoX0 = 0, dragPhotoY0 = 0;
+    let lastTouchDist = null;
 
-    // ─────────────────────────────────────────────────────────────
-    // Canvas
-    // ─────────────────────────────────────────────────────────────
     const canvas = document.getElementById('card-canvas');
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const ctx    = canvas.getContext('2d', { willReadFrequently: true });
 
-    // ─────────────────────────────────────────────────────────────
-    // Helpers
-    // ─────────────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════
+    //  Helpers (exact Python logic)
+    // ═══════════════════════════════════════════════════════════════════
     function makeTempCanvas(w, h) {
       const c = document.createElement('canvas');
       c.width = w; c.height = h;
@@ -260,7 +250,6 @@
     }
 
     function getPhotoDims(img) {
-      if (!img) return { w: 0, h: 0 };
       return {
         w: img.naturalWidth || img.width || 0,
         h: img.naturalHeight || img.height || 0
@@ -270,20 +259,20 @@
     function buildRightCanvas() {
       const { x: rx, y: ry, w: rw, h: rh } = RIGHT_RECT;
       const c = makeTempCanvas(rw, rh);
-      const cx = c.getContext('2d');
       const dims = getPhotoDims(photoImg);
       const pw = dims.w * photoScale;
       const ph = dims.h * photoScale;
-      cx.drawImage(photoImg, photoX - rx, photoY - ry, pw, ph);
+      c.getContext('2d').drawImage(photoImg, photoX - rx, photoY - ry, pw, ph);
       return c;
     }
 
     function buildNegative(rightCanvas) {
       const { w, h } = LEFT_RECT;
-      // 1. Resize / copy
+
+      // 1. Copy / resize to left size
       const s1 = makeTempCanvas(w, h);
       s1.getContext('2d').drawImage(rightCanvas, 0, 0, w, h);
-      
+
       // 2. Invert
       const s2 = makeTempCanvas(w, h);
       const c2 = s2.getContext('2d', { willReadFrequently: true });
@@ -296,14 +285,14 @@
         d2[i+2] = 255 - d2[i+2];
       }
       c2.putImageData(id2, 0, 0);
-      
+
       // 3. Gaussian blur 1.5px
       const s3 = makeTempCanvas(w, h);
       const c3 = s3.getContext('2d');
       c3.filter = 'blur(1.5px)';
       c3.drawImage(s2, 0, 0);
       c3.filter = 'none';
-      
+
       // 4. Mirror
       const s4 = makeTempCanvas(w, h);
       const c4 = s4.getContext('2d', { willReadFrequently: true });
@@ -311,15 +300,13 @@
       c4.scale(-1, 1);
       c4.drawImage(s3, 0, 0);
       c4.setTransform(1, 0, 0, 1, 0, 0);
-      
+
       // 5. Blue-white LUT (exact Python)
       const id4 = c4.getImageData(0, 0, w, h);
       const d4 = id4.data;
       for (let i = 0; i < d4.length; i += 4) {
         const lum = Math.round((d4[i] + d4[i+1] + d4[i+2]) / 3);
-        d4[i] = lum;
-        d4[i+1] = lum;
-        d4[i+2] = 255;
+        d4[i] = lum; d4[i+1] = lum; d4[i+2] = 255;
       }
       c4.putImageData(id4, 0, 0);
       return s4;
@@ -328,12 +315,15 @@
     function renderName() {
       const name = document.getElementById('nameInput').value.toUpperCase().trim();
       if (!name) return;
+
       ctx.save();
       ctx.textBaseline = 'top';
       ctx.fillStyle = 'rgb(255, 30, 30)';
-      ctx.font = `bold ${NAME_FONT_SIZE}px "Arial Narrow", "Arial Narrow Bold", Arial, Helvetica, sans-serif`;
-      const maxW = NAME_RECT.w;
+      ctx.font = `bold ${NAME_FONT_SZ}px "Arial Narrow", "Arial Narrow Bold", Arial, sans-serif`;
+
       const textW = ctx.measureText(name).width;
+      const maxW = NAME_RECT.w;
+
       if (textW > maxW) {
         ctx.translate(NAME_PASTE_X, NAME_PASTE_Y);
         ctx.scale(maxW / textW, 1);
@@ -345,180 +335,146 @@
     }
 
     function render() {
-      // 1. Black base (exact Python)
+      // 1. Black base
       ctx.fillStyle = '#000000';
-      ctx.fillRect(0, 0, 540, 340);
+      ctx.fillRect(0, 0, CW, CH);
 
       if (photoImg) {
-        const rightCanvas = buildRightCanvas();
-        // 2. Negative under template (left)
-        const negCanvas = buildNegative(rightCanvas);
-        ctx.drawImage(negCanvas, LEFT_RECT.x, LEFT_RECT.y);
-        // 3. Normal photo under template (right)
-        ctx.drawImage(rightCanvas, RIGHT_RECT.x, RIGHT_RECT.y);
+        const right = buildRightCanvas();
+        // 2. Negative (left) — now correctly sized, won't cover right photo
+        ctx.drawImage(buildNegative(right), LEFT_RECT.x, LEFT_RECT.y);
+        // 3. Normal (right)
+        ctx.drawImage(right, RIGHT_RECT.x, RIGHT_RECT.y);
       }
 
       // 4. Template on top
       if (templateImg) {
-        ctx.drawImage(templateImg, 0, 0, 540, 340);
+        ctx.drawImage(templateImg, 0, 0, CW, CH);
       }
 
-      // 5. Name on top (exact Python order)
+      // 5. Name last (top-right)
       if (templateImg || photoImg) {
         renderName();
       }
     }
 
-    function loop() {
-      render();
-      requestAnimationFrame(loop);
-    }
+    function loop() { render(); requestAnimationFrame(loop); }
     loop();
 
-    // ─────────────────────────────────────────────────────────────
-    // Demo Photo (Leeloo style)
-    // ─────────────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════
+    //  Demo (fixes missing landing image)
+    // ═══════════════════════════════════════════════════════════════════
     function createDemoPhoto() {
-      const c = makeTempCanvas(220, 180);
+      const c = makeTempCanvas(225, 285);
       const cx = c.getContext('2d');
-      cx.fillStyle = '#1e2937';
-      cx.fillRect(0, 0, 220, 180);
+      cx.fillStyle = '#1e2937'; cx.fillRect(0, 0, 225, 285);
       // Head
       cx.fillStyle = '#fed7aa';
-      cx.beginPath();
-      cx.ellipse(110, 85, 55, 70, 0, 0, Math.PI * 2);
-      cx.fill();
-      // Red hair (Leeloo)
+      cx.beginPath(); cx.ellipse(112, 130, 72, 95, 0, 0, Math.PI * 2); cx.fill();
+      // Red hair
       cx.fillStyle = '#b91c1c';
-      cx.beginPath();
-      cx.ellipse(110, 52, 65, 48, 0, 0, Math.PI * 2);
-      cx.fill();
+      cx.beginPath(); cx.ellipse(112, 85, 85, 62, 0, 0, Math.PI * 2); cx.fill();
       // Eyes
-      cx.fillStyle = '#ffffff';
-      cx.beginPath(); cx.ellipse(82, 78, 13, 8, 0, 0, Math.PI * 2); cx.fill();
-      cx.beginPath(); cx.ellipse(138, 78, 13, 8, 0, 0, Math.PI * 2); cx.fill();
+      cx.fillStyle = '#fff';
+      cx.beginPath(); cx.ellipse(82, 118, 16, 10, 0, 0, Math.PI * 2); cx.fill();
+      cx.beginPath(); cx.ellipse(142, 118, 16, 10, 0, 0, Math.PI * 2); cx.fill();
       cx.fillStyle = '#1e40af';
-      cx.beginPath(); cx.ellipse(82, 78, 6.5, 6.5, 0, 0, Math.PI * 2); cx.fill();
-      cx.beginPath(); cx.ellipse(138, 78, 6.5, 6.5, 0, 0, Math.PI * 2); cx.fill();
+      cx.beginPath(); cx.ellipse(82, 118, 8, 8, 0, 0, Math.PI * 2); cx.fill();
+      cx.beginPath(); cx.ellipse(142, 118, 8, 8, 0, 0, Math.PI * 2); cx.fill();
       // Mouth
-      cx.strokeStyle = '#9f1239';
-      cx.lineWidth = 2.8;
-      cx.beginPath();
-      cx.arc(110, 108, 15, 0.15 * Math.PI, 0.85 * Math.PI);
-      cx.stroke();
+      cx.strokeStyle = '#9f1239'; cx.lineWidth = 3.5;
+      cx.beginPath(); cx.arc(112, 165, 20, 0.2 * Math.PI, 0.8 * Math.PI); cx.stroke();
       return c;
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Load Demo (fixes missing landing image + shows correct name position)
-    // ─────────────────────────────────────────────────────────────
     function loadDemo() {
-      const demo = makeTempCanvas(540, 340);
+      const demo = makeTempCanvas(CW, CH);
       const dctx = demo.getContext('2d');
 
-      // Futuristic template background (matches Python palette)
-      const grad = dctx.createLinearGradient(0, 0, 0, 340);
-      grad.addColorStop(0, '#0a0a0f');
-      grad.addColorStop(1, '#1a1a2e');
-      dctx.fillStyle = grad;
-      dctx.fillRect(0, 0, 540, 340);
+      // Dark futuristic background
+      const grad = dctx.createLinearGradient(0, 0, 0, CH);
+      grad.addColorStop(0, '#0a0a0f'); grad.addColorStop(1, '#1a1a2e');
+      dctx.fillStyle = grad; dctx.fillRect(0, 0, CW, CH);
 
       // Tech grid
-      dctx.strokeStyle = '#334155';
-      dctx.lineWidth = 1;
-      for (let x = 18; x < 540; x += 26) {
-        dctx.beginPath(); dctx.moveTo(x, 0); dctx.lineTo(x, 340); dctx.stroke();
-      }
-      for (let y = 18; y < 340; y += 26) {
-        dctx.beginPath(); dctx.moveTo(0, y); dctx.lineTo(540, y); dctx.stroke();
-      }
+      dctx.strokeStyle = '#334155'; dctx.lineWidth = 1;
+      for (let x = 20; x < CW; x += 28) { dctx.beginPath(); dctx.moveTo(x, 0); dctx.lineTo(x, CH); dctx.stroke(); }
+      for (let y = 20; y < CH; y += 28) { dctx.beginPath(); dctx.moveTo(0, y); dctx.lineTo(CW, y); dctx.stroke(); }
 
-      // Photo frames (cyan sci-fi borders)
-      dctx.strokeStyle = '#22d3ee';
-      dctx.lineWidth = 5;
-      dctx.strokeRect(LEFT_RECT.x - 4, LEFT_RECT.y - 4, LEFT_RECT.w + 8, LEFT_RECT.h + 8);
-      dctx.strokeRect(RIGHT_RECT.x - 4, RIGHT_RECT.y - 4, RIGHT_RECT.w + 8, RIGHT_RECT.h + 8);
-      dctx.strokeStyle = '#67e8f9';
-      dctx.lineWidth = 1.5;
+      // Photo frames (cyan sci-fi)
+      dctx.strokeStyle = '#22d3ee'; dctx.lineWidth = 6;
+      dctx.strokeRect(LEFT_RECT.x - 5, LEFT_RECT.y - 5, LEFT_RECT.w + 10, LEFT_RECT.h + 10);
+      dctx.strokeRect(RIGHT_RECT.x - 5, RIGHT_RECT.y - 5, RIGHT_RECT.w + 10, RIGHT_RECT.h + 10);
+      dctx.strokeStyle = '#67e8f9'; dctx.lineWidth = 2;
       dctx.strokeRect(LEFT_RECT.x, LEFT_RECT.y, LEFT_RECT.w, LEFT_RECT.h);
       dctx.strokeRect(RIGHT_RECT.x, RIGHT_RECT.y, RIGHT_RECT.w, RIGHT_RECT.h);
 
-      // Header text
-      dctx.fillStyle = '#e0f2fe';
-      dctx.font = 'bold 24px system-ui, Arial';
-      dctx.fillText('MULTIPASS', 26, 42);
-      dctx.font = '10px "Courier New", monospace';
-      dctx.fillStyle = '#64748b';
-      dctx.fillText('FEDERAL REPUBLIC OF EARTH  •  5E-CLASS', 26, 58);
+      // Header
+      dctx.fillStyle = '#e0f2fe'; dctx.font = 'bold 28px system-ui';
+      dctx.fillText('MULTIPASS', 32, 52);
+      dctx.font = '11px monospace'; dctx.fillStyle = '#64748b';
+      dctx.fillText('FEDERAL REPUBLIC OF EARTH  •  5E-CLASS', 32, 70);
 
       // Right labels
-      dctx.fillStyle = '#22d3ee';
-      dctx.font = 'bold 11px system-ui';
-      dctx.fillText('SUBJECT', 475, 42);
-      dctx.fillStyle = '#f1f5f9';
-      dctx.font = '9px monospace';
-      dctx.fillText('ID: 784392-5E', 475, 56);
+      dctx.fillStyle = '#22d3ee'; dctx.font = 'bold 13px system-ui';
+      dctx.fillText('SUBJECT', 920, 52);
+      dctx.fillStyle = '#f1f5f9'; dctx.font = '10px monospace';
+      dctx.fillText('ID: 784392-5E', 920, 68);
 
       // Bottom bar
-      dctx.fillStyle = '#1e2937';
-      dctx.fillRect(0, 295, 540, 45);
-      dctx.fillStyle = '#64748b';
-      dctx.font = '8px monospace';
-      dctx.fillText('PROPERTY OF THE FEDERATION  •  DO NOT DUPLICATE  •  EXPIRES 12.31.2263', 18, 322);
+      dctx.fillStyle = '#1e2937'; dctx.fillRect(0, 580, CW, 58);
+      dctx.fillStyle = '#64748b'; dctx.font = '9px monospace';
+      dctx.fillText('PROPERTY OF THE FEDERATION  •  DO NOT DUPLICATE  •  EXPIRES 12.31.2263', 28, 612);
 
       // Barcode
       dctx.fillStyle = '#475569';
-      for (let i = 0; i < 28; i++) {
-        const bw = (i % 4 === 0) ? 2.5 : 1.2;
-        dctx.fillRect(415 + i * 4.3, 300, bw, 28);
+      for (let i = 0; i < 32; i++) {
+        const bw = (i % 4 === 0) ? 3 : 1.5;
+        dctx.fillRect(820 + i * 5.5, 585, bw, 35);
       }
 
       templateImg = demo;
-      document.getElementById('placeholder').classList.add('hidden');
+      document.getElementById('placeholder-img').style.display = 'none';
       document.getElementById('extra-controls').style.display = 'flex';
 
-      // Set demo name (top-right, red, squished if needed)
       const nameInput = document.getElementById('nameInput');
       nameInput.value = 'LEELOO DALLAS';
 
-      // Demo photo centered in right rect
       photoImg = createDemoPhoto();
-      photoScale = 0.92;
+      photoScale = 0.95;
       document.getElementById('sizeSlider').value = photoScale;
       const dims = getPhotoDims(photoImg);
       const rw = RIGHT_RECT.w, rh = RIGHT_RECT.h;
-      const pw = dims.w * photoScale;
-      const ph = dims.h * photoScale;
+      const pw = dims.w * photoScale, ph = dims.h * photoScale;
       photoX = RIGHT_RECT.x + (rw - pw) / 2;
       photoY = RIGHT_RECT.y + (rh - ph) / 2;
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Event Listeners
-    // ─────────────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════
+    //  Events
+    // ═══════════════════════════════════════════════════════════════════
     document.getElementById('demoBtn').addEventListener('click', loadDemo);
 
-    document.getElementById('templateUpload').addEventListener('change', e => {
-      const file = e.target.files[0];
-      if (!file) return;
+    function loadImage(file, cb) {
       const url = URL.createObjectURL(file);
       const img = new Image();
-      img.onload = () => {
-        templateImg = img;
-        URL.revokeObjectURL(url);
-        document.getElementById('placeholder').classList.add('hidden');
-        document.getElementById('extra-controls').style.display = 'flex';
-      };
-      img.onerror = () => { URL.revokeObjectURL(url); alert('Could not load template.'); };
+      img.onload = () => { cb(img); URL.revokeObjectURL(url); };
+      img.onerror = () => { URL.revokeObjectURL(url); alert('Could not load image.'); };
       img.src = url;
+    }
+
+    document.getElementById('templateUpload').addEventListener('change', e => {
+      if (!e.target.files[0]) return;
+      loadImage(e.target.files[0], img => {
+        templateImg = img;
+        document.getElementById('placeholder-img').style.display = 'none';
+        document.getElementById('extra-controls').style.display = 'flex';
+      });
     });
 
     document.getElementById('photoUpload').addEventListener('change', e => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const url = URL.createObjectURL(file);
-      const img = new Image();
-      img.onload = () => {
+      if (!e.target.files[0]) return;
+      loadImage(e.target.files[0], img => {
         photoImg = img;
         photoScale = 1.0;
         document.getElementById('sizeSlider').value = 1.0;
@@ -526,125 +482,97 @@
         const rw = RIGHT_RECT.w, rh = RIGHT_RECT.h;
         photoX = RIGHT_RECT.x + (rw - dims.w) / 2;
         photoY = RIGHT_RECT.y + (rh - dims.h) / 2;
-        URL.revokeObjectURL(url);
-      };
-      img.onerror = () => { URL.revokeObjectURL(url); alert('Could not load photo.'); };
-      img.src = url;
+      });
     });
-
-    document.getElementById('nameInput').addEventListener('input', () => { /* render loop handles */ });
 
     document.getElementById('sizeSlider').addEventListener('input', e => {
       photoScale = parseFloat(e.target.value);
     });
 
     function syncSlider() {
-      const slider = document.getElementById('sizeSlider');
-      const v = Math.max(parseFloat(slider.min), Math.min(parseFloat(slider.max), photoScale));
-      slider.value = v;
+      const s = document.getElementById('sizeSlider');
+      s.value = Math.min(+s.max, Math.max(+s.min, photoScale));
     }
 
     document.getElementById('downloadBtn').addEventListener('click', () => {
       render();
-      const rawName = document.getElementById('nameInput').value.trim().toUpperCase() || 'MULTIPASS';
-      const safeName = rawName.replace(/[^A-Z0-9]/g, '_');
-      
-      // Front card
-      const link = document.createElement('a');
-      link.download = `${safeName}_multipass_card.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
+      const raw = document.getElementById('nameInput').value.trim().toUpperCase() || 'MULTIPASS';
+      const safe = raw.replace(/[^A-Z0-9]/g, '_');
 
-      // Rear card (simple but matching style)
+      const a = document.createElement('a');
+      a.download = safe + '_multipass_card.png';
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+
       setTimeout(() => {
-        const rear = makeTempCanvas(540, 340);
+        const rear = makeTempCanvas(CW, CH);
         const rctx = rear.getContext('2d');
-        rctx.fillStyle = '#0a0a0f';
-        rctx.fillRect(0, 0, 540, 340);
-        rctx.strokeStyle = '#22d3ee';
-        rctx.lineWidth = 2;
-        for (let i = 0; i < 540; i += 18) {
-          rctx.beginPath(); rctx.moveTo(i, 0); rctx.lineTo(i, 340); rctx.stroke();
-        }
-        rctx.fillStyle = '#e0f2fe';
-        rctx.font = 'bold 32px system-ui';
-        rctx.fillText('MULTIPASS', 140, 120);
-        rctx.font = '14px monospace';
-        rctx.fillStyle = '#64748b';
-        rctx.fillText('REAR • DO NOT DUPLICATE', 155, 155);
+        rctx.fillStyle = '#0a0a0f'; rctx.fillRect(0, 0, CW, CH);
+        rctx.strokeStyle = '#22d3ee'; rctx.lineWidth = 2;
+        for (let i = 0; i < CW; i += 20) { rctx.beginPath(); rctx.moveTo(i, 0); rctx.lineTo(i, CH); rctx.stroke(); }
+        rctx.fillStyle = '#e0f2fe'; rctx.font = 'bold 36px system-ui';
+        rctx.fillText('MULTIPASS', 280, 180);
+        rctx.font = '16px monospace'; rctx.fillStyle = '#64748b';
+        rctx.fillText('REAR • DO NOT DUPLICATE', 310, 220);
         rctx.fillStyle = '#475569';
-        for (let i = 0; i < 35; i++) {
-          const bw = (i % 3 === 0) ? 3 : 1.5;
-          rctx.fillRect(120 + i * 8, 200, bw, 40);
+        for (let i = 0; i < 40; i++) {
+          const bw = (i % 3 === 0) ? 3.5 : 1.8;
+          rctx.fillRect(260 + i * 12, 280, bw, 55);
         }
-        rctx.fillStyle = '#94a3b8';
-        rctx.font = '9px monospace';
-        rctx.fillText('FEDERAL REPUBLIC OF EARTH  •  5E-CLASS  •  2263', 95, 280);
-        
+        rctx.fillStyle = '#94a3b8'; rctx.font = '10px monospace';
+        rctx.fillText('FEDERAL REPUBLIC OF EARTH • 5E-CLASS • 2263', 220, 400);
+
         const rearLink = document.createElement('a');
-        rearLink.download = `${safeName}_multipass_rear.png`;
+        rearLink.download = safe + '_multipass_rear.png';
         rearLink.href = rear.toDataURL('image/png');
         rearLink.click();
-      }, 420);
+      }, 450);
     });
 
-    // Mouse drag
-    function canvasCoords(e) {
-      const rect = canvas.getBoundingClientRect();
-      return {
-        x: (e.clientX - rect.left) * (canvas.width / rect.width),
-        y: (e.clientY - rect.top) * (canvas.height / rect.height)
-      };
+    // Mouse / Touch / Keyboard (same as before)
+    function toCanvas(clientX, clientY) {
+      const r = canvas.getBoundingClientRect();
+      return { x: (clientX - r.left) * (CW / r.width), y: (clientY - r.top) * (CH / r.height) };
     }
 
     canvas.addEventListener('mousedown', e => {
       if (!photoImg) return;
       isDragging = true;
-      const pos = canvasCoords(e);
-      dragStartX = pos.x;
-      dragStartY = pos.y;
-      dragPhotoX0 = photoX;
-      dragPhotoY0 = photoY;
+      const p = toCanvas(e.clientX, e.clientY);
+      dragStartX = p.x; dragStartY = p.y;
+      dragPhotoX0 = photoX; dragPhotoY0 = photoY;
     });
-
     window.addEventListener('mousemove', e => {
-      if (!isDragging || !photoImg) return;
-      const pos = canvasCoords(e);
-      photoX = dragPhotoX0 + (pos.x - dragStartX);
-      photoY = dragPhotoY0 + (pos.y - dragStartY);
+      if (!isDragging) return;
+      const p = toCanvas(e.clientX, e.clientY);
+      photoX = dragPhotoX0 + (p.x - dragStartX);
+      photoY = dragPhotoY0 + (p.y - dragStartY);
     });
-
     window.addEventListener('mouseup', () => { isDragging = false; });
 
-    // Wheel zoom
     canvas.addEventListener('wheel', e => {
       if (!photoImg) return;
       e.preventDefault();
-      const factor = e.deltaY > 0 ? 0.94 : 1.06;
-      photoScale = Math.max(0.05, Math.min(20, photoScale * factor));
+      photoScale = Math.max(0.05, Math.min(20, photoScale * (e.deltaY > 0 ? 0.95 : 1.06)));
       syncSlider();
     }, { passive: false });
 
-    // Keyboard arrows
     window.addEventListener('keydown', e => {
       if (!photoImg) return;
-      const step = 4;
+      const step = 6;
       if (e.key === 'ArrowLeft') { photoX -= step; e.preventDefault(); }
       else if (e.key === 'ArrowRight') { photoX += step; e.preventDefault(); }
       else if (e.key === 'ArrowUp') { photoY -= step; e.preventDefault(); }
       else if (e.key === 'ArrowDown') { photoY += step; e.preventDefault(); }
     });
 
-    // Touch drag + pinch
-    let lastTouchDist = null;
     canvas.addEventListener('touchstart', e => {
       if (!photoImg) return;
       if (e.touches.length === 1) {
         isDragging = true;
-        dragStartX = e.touches[0].clientX;
-        dragStartY = e.touches[0].clientY;
-        dragPhotoX0 = photoX;
-        dragPhotoY0 = photoY;
+        const p = toCanvas(e.touches[0].clientX, e.touches[0].clientY);
+        dragStartX = p.x; dragStartY = p.y;
+        dragPhotoX0 = photoX; dragPhotoY0 = photoY;
       } else if (e.touches.length === 2) {
         lastTouchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
       }
@@ -654,31 +582,24 @@
     canvas.addEventListener('touchmove', e => {
       if (!photoImg) return;
       if (e.touches.length === 1 && isDragging) {
-        const rect = canvas.getBoundingClientRect();
-        const sx = canvas.width / rect.width;
-        const sy = canvas.height / rect.height;
-        photoX = dragPhotoX0 + (e.touches[0].clientX - dragStartX) * sx;
-        photoY = dragPhotoY0 + (e.touches[0].clientY - dragStartY) * sy;
+        const p = toCanvas(e.touches[0].clientX, e.touches[0].clientY);
+        photoX = dragPhotoX0 + (p.x - dragStartX);
+        photoY = dragPhotoY0 + (p.y - dragStartY);
       } else if (e.touches.length === 2 && lastTouchDist) {
-        const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-        photoScale = Math.max(0.05, Math.min(20, photoScale * (dist / lastTouchDist)));
-        lastTouchDist = dist;
+        const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+        photoScale = Math.max(0.05, Math.min(20, photoScale * (d / lastTouchDist)));
+        lastTouchDist = d;
         syncSlider();
       }
       e.preventDefault();
     }, { passive: false });
 
-    canvas.addEventListener('touchend', () => {
-      isDragging = false;
-      lastTouchDist = null;
-    });
+    canvas.addEventListener('touchend', () => { isDragging = false; lastTouchDist = null; });
 
     // Auto-load demo on first visit (fixes missing landing image)
     setTimeout(() => {
-      if (!templateImg) {
-        loadDemo();
-      }
-    }, 650);
+      if (!templateImg) loadDemo();
+    }, 700);
   </script>
 </body>
 </html>

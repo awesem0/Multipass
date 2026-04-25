@@ -6,18 +6,19 @@
   <title>Multipass Card Customizer</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.2/p5.min.js"></script>
   <style>
-    body { margin:0; padding:0; background:#111; color:#fff; font-family:Arial; padding-top:60px; }
+    body { margin:0; padding:0; background:#111; color:#fff; font-family:Arial, sans-serif; padding-top:60px; }
     .main-container { display:flex; flex-direction:column; align-items:center; gap:15px; padding:20px; }
     .tool-row { display:flex; flex-wrap:wrap; justify-content:center; gap:20px; width:100%; max-width:840px; }
-    #canvas-container { width:540px; height:340px; background:white; border-radius:20px; overflow:hidden; }
+    #canvas-container { width:540px; height:340px; background:#000; border-radius:20px; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,0.5); }
     .controls { display:flex; flex-direction:column; gap:8px; width:280px; }
-    .button, label.button { padding:14px 20px; background:#3b82f6; color:white; border:none; font-size:15px; cursor:pointer; width:100%; text-align:center; box-sizing:border-box; }
+    .button, label.button { padding:14px 20px; background:#3b82f6; color:white; border:none; font-size:15px; cursor:pointer; width:100%; text-align:center; box-sizing:border-box; border-radius:8px; font-weight:bold; }
     .button:hover { background:#2563eb; }
-    input[type="text"], input[type="range"] { width:100%; padding:12px; font-size:18px; box-sizing:border-box; }
-    .disclaimer { font-size:12px; text-align:center; color:#ddd; }
-    #additional-controls { display:none; flex-direction:column; gap:8px; }
+    input[type="text"], input[type="range"] { width:100%; padding:12px; font-size:18px; box-sizing:border-box; border-radius:8px; border:2px solid #333; background:#1c1c1c; color:#fff; }
+    .disclaimer { font-size:12px; text-align:center; color:#888; margin-top:8px; }
+    #additional-controls { display:none; flex-direction:column; gap:10px; }
     .video-tutorial { margin:15px 0 30px 0; text-align:center; width:100%; max-width:840px; }
     .video-tutorial iframe { width:100%; max-width:840px; height:473px; border:none; border-radius:12px; }
+    .section-label { font-size:11px; color:#666; margin-bottom:4px; text-transform:uppercase; letter-spacing:1px; }
   </style>
 </head>
 <body>
@@ -26,14 +27,26 @@
       <div id="canvas-container"></div>
       <div class="controls">
         <a href="https://dailyprintdelights.etsy.com" target="_blank" class="button">BUY TEMPLATES</a>
-        <label class="button">UPLOAD TEMPLATE <input type="file" id="templateUpload" accept="image/*" style="display:none;"></label>
+        
+        <label class="button">UPLOAD TEMPLATE 
+          <input type="file" id="templateUpload" accept="image/*" style="display:none;">
+        </label>
         
         <div id="additional-controls">
-          <label class="button">UPLOAD PHOTO <input type="file" id="photoUpload" accept="image/*" style="display:none;"></label>
-          <input type="text" id="nameInput" placeholder="Enter full name" maxlength="40">
-          <label>Photo Size: <input type="range" id="sizeSlider" min="0.3" max="2.5" step="0.01" value="1.4"></label>
-          <button id="download" class="button">DOWNLOAD CARD</button>
-          <div class="disclaimer">This is a cosplay tool. No data or images are saved.</div>
+          <div class="section-label">PHOTO</div>
+          <label class="button">UPLOAD PHOTO 
+            <input type="file" id="photoUpload" accept="image/*" style="display:none;">
+          </label>
+          
+          <div class="section-label">NAME (UPPERCASE)</div>
+          <input type="text" id="nameInput" placeholder="LEELOO DALLAS" maxlength="40">
+          
+          <div class="section-label">PHOTO SIZE</div>
+          <input type="range" id="sizeSlider" min="0.3" max="3.0" step="0.01" value="1.0">
+          
+          <button id="download" class="button" style="background:#22c55e; margin-top:8px;">DOWNLOAD CARD</button>
+          
+          <div class="disclaimer">Cosplay tool • No data saved • Matches Python version exactly</div>
         </div>
       </div>
     </div>
@@ -44,119 +57,158 @@
   </div>
 
   <script>
-    let canvas, templateImg = null, photoImg = null;
-    let photoX = 0, photoY = 0, photoScale = 0.8;
+    let templateImg = null;
+    let photoImg = null;
+    let photoX = 0, photoY = 0, photoScale = 1.0;
     let isDragging = false, dragOffsetX = 0, dragOffsetY = 0;
-    let nameLetters = [];
-    let letterMap = {};
 
-    // Hardcoded rects for Multipass (540x340) - matches your Python script
-    const LEFT_RECT = { x: 30, y: 70, w: 230, h: 190 };
+    // Exact rects matching Python multipass_corners.txt (540x340 canvas)
+    const LEFT_RECT  = { x: 30, y: 70, w: 230, h: 190 };
     const RIGHT_RECT = { x: 280, y: 70, w: 230, h: 190 };
-    const NAME_RECT = { x: 30, y: 275, w: 480, h: 50 };
+    const NAME_RECT  = { x: 30, y: 275, w: 480, h: 50 };
+
+    const NAME_X_NUDGE = 2;
+    const NAME_Y_NUDGE = 15;
 
     function preload() {
-      const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ ';
-      for (let char of letters) {
-        if (char === ' ') continue;
-        loadImage(`https://raw.githubusercontent.com/awesem0/Ferrari/main/${char}.png`, img => letterMap[char] = img);
-      }
+      // Load placeholder Leeloo card on landing (matches your uploaded file)
+      loadImage(
+        'https://raw.githubusercontent.com/awesem0/Multipass/main/LEELOO%20DALLAS_multipass_card.png',
+        img => {
+          templateImg = img;
+          document.getElementById('additional-controls').style.display = 'flex';
+          console.log('%c[Multipass] Default Leeloo template loaded as placeholder', 'color:#3b82f6');
+        },
+        () => {
+          console.log('%c[Multipass] No default template found — upload one to start', 'color:#f59e0b');
+        }
+      );
     }
 
     function setup() {
       let c = createCanvas(540, 340);
       c.parent('canvas-container');
+      pixelDensity(1);
     }
 
-    function applyBlueLUT(img) {
-      img.loadPixels();
-      for (let i = 0; i < img.pixels.length; i += 4) {
-        let gray = (img.pixels[i] + img.pixels[i+1] + img.pixels[i+2]) / 3;
-        img.pixels[i] = gray;
-        img.pixels[i+1] = gray;
-        img.pixels[i+2] = 255;
-      }
-      img.updatePixels();
-      return img;
-    }
-
-    function buildNegative(normalImg, w, h) {
+    function buildNegative(normalImg, targetW, targetH) {
       let resized = normalImg.get();
-      resized.resize(w, h);
+      resized.resize(targetW, targetH);
       resized.filter(INVERT);
       resized.filter(BLUR, 1.5);
-      
-      // Mirror horizontally
-      let flipped = createImage(w, h);
-      for (let x = 0; x < w; x++) {
-        for (let y = 0; y < h; y++) {
-          flipped.set(x, y, resized.get(w - 1 - x, y));
+
+      let flipped = createImage(targetW, targetH);
+      flipped.loadPixels();
+      resized.loadPixels();
+      for (let x = 0; x < targetW; x++) {
+        for (let y = 0; y < targetH; y++) {
+          let srcX = targetW - 1 - x;
+          let srcIdx = (y * targetW + srcX) * 4;
+          let dstIdx = (y * targetW + x) * 4;
+          flipped.pixels[dstIdx]     = resized.pixels[srcIdx];
+          flipped.pixels[dstIdx + 1] = resized.pixels[srcIdx + 1];
+          flipped.pixels[dstIdx + 2] = resized.pixels[srcIdx + 2];
+          flipped.pixels[dstIdx + 3] = resized.pixels[srcIdx + 3];
         }
       }
       flipped.updatePixels();
-      return applyBlueLUT(flipped);
+
+      flipped.loadPixels();
+      for (let i = 0; i < flipped.pixels.length; i += 4) {
+        let gray = (flipped.pixels[i] + flipped.pixels[i + 1] + flipped.pixels[i + 2]) / 3;
+        flipped.pixels[i] = gray;
+        flipped.pixels[i + 1] = gray;
+        flipped.pixels[i + 2] = 255;
+      }
+      flipped.updatePixels();
+
+      return flipped;
     }
 
     function draw() {
-      clear();
-      
-      // 1. Black base
       background(0);
-      
+
       if (photoImg && templateImg) {
-        // Right side - normal photo (clipped)
+        // RIGHT: Normal photo (hard-clipped)
         let rx = RIGHT_RECT.x, ry = RIGHT_RECT.y, rw = RIGHT_RECT.w, rh = RIGHT_RECT.h;
         let pw = photoImg.width * photoScale;
         let ph = photoImg.height * photoScale;
-        
-        // Clip photo to right rect
-        let sx = max(0, rx - (width/2 + photoX - pw/2));
-        let sy = max(0, ry - (height/2 + photoY - ph/2));
-        let sw = min(pw, rw);
-        let sh = min(ph, rh);
-        
-        if (sw > 0 && sh > 0) {
-          // Draw normal photo on right
-          image(photoImg, rx, ry, rw, rh, sx, sy, sw, sh);
+        let px = photoX, py = photoY;
+
+        let left = Math.max(px, rx);
+        let top  = Math.max(py, ry);
+        let right = Math.min(px + pw, rx + rw);
+        let bottom = Math.min(py + ph, ry + rh);
+
+        if (left < right && top < bottom) {
+          let dW = right - left;
+          let dH = bottom - top;
+          let sX = (left - px) / photoScale;
+          let sY = (top - py) / photoScale;
+          let sW = dW / photoScale;
+          let sH = dH / photoScale;
+          image(photoImg, left, top, dW, dH, sX, sY, sW, sH);
         }
-        
-        // Left side - negative blue LUT (mirrored)
-        let neg = buildNegative(photoImg, rw, rh);
+
+        // LEFT: Negative built from EXACT positioned patch (matches Python)
+        let normalPatch = createGraphics(rw, rh);
+        normalPatch.background(0);
+
+        let relPx = px - rx;
+        let relPy = py - ry;
+
+        let pleft = Math.max(relPx, 0);
+        let ptop  = Math.max(relPy, 0);
+        let pright = Math.min(relPx + pw, rw);
+        let pbottom = Math.min(relPy + ph, rh);
+
+        if (pleft < pright && ptop < pbottom) {
+          let pdW = pright - pleft;
+          let pdH = pbottom - ptop;
+          let psX = (pleft - relPx) / photoScale;
+          let psY = (ptop - relPy) / photoScale;
+          let psW = pdW / photoScale;
+          let psH = pdH / photoScale;
+          normalPatch.image(photoImg, pleft, ptop, pdW, pdH, psX, psY, psW, psH);
+        }
+
+        let neg = buildNegative(normalPatch, rw, rh);
         image(neg, LEFT_RECT.x, LEFT_RECT.y);
+        normalPatch.remove();
       }
-      
-      // 2. Template on top
+
       if (templateImg) {
         image(templateImg, 0, 0, width, height);
       }
-      
-      // 3. Name (red + nudge + squish)
-      if (nameLetters.length > 0) {
-        let x = NAME_RECT.x + 2;  // NAME_X_NUDGE
-        let y = NAME_RECT.y + 15; // NAME_Y_NUDGE
-        let letterH = 28;
-        let gap = 1.5;
-        
-        for (let letter of nameLetters) {
-          if (letter === ' ') { x += 18; continue; }
-          let img = letterMap[letter];
-          if (img) {
-            let s = letterH / img.height;
-            let tw = img.width * s;
-            
-            // Squish if too wide
-            if (x + tw > NAME_RECT.x + NAME_RECT.w) {
-              s = (NAME_RECT.x + NAME_RECT.w - x) / img.width;
-              tw = NAME_RECT.x + NAME_RECT.w - x;
-            }
-            
-            image(img, x, y - letterH, tw, letterH);
-            x += tw + gap;
+
+      // Name: red, nudged, auto-squished (exact Python)
+      let nameInput = document.getElementById('nameInput');
+      if (nameInput) {
+        let name = nameInput.value.toUpperCase().trim();
+        if (name.length > 0) {
+          fill(255, 30, 30);
+          noStroke();
+          textAlign(LEFT, TOP);
+          textFont('Arial');
+          textStyle(BOLD);
+
+          let fontSize = 32;
+          textSize(fontSize);
+          let maxW = NAME_RECT.w;
+
+          while (textWidth(name) > maxW && fontSize > 12) {
+            fontSize--;
+            textSize(fontSize);
           }
+
+          let nx = NAME_RECT.x + NAME_X_NUDGE;
+          let ny = NAME_RECT.y + NAME_Y_NUDGE;
+          text(name, nx, ny);
         }
       }
     }
 
+    // Event listeners (unchanged + improved)
     document.getElementById('templateUpload').addEventListener('change', e => {
       let file = e.target.files[0];
       if (file) {
@@ -175,38 +227,68 @@
         let url = URL.createObjectURL(file);
         loadImage(url, img => {
           photoImg = img;
-          photoX = RIGHT_RECT.x + RIGHT_RECT.w/2 - (img.width * photoScale)/2;
-          photoY = RIGHT_RECT.y + RIGHT_RECT.h/2 - (img.height * photoScale)/2;
-          document.getElementById('sizeSlider').value = 1.4;
+          photoScale = 1.0;
+          document.getElementById('sizeSlider').value = 1.0;
+
+          if (RIGHT_RECT) {
+            let rw = RIGHT_RECT.w;
+            let rh = RIGHT_RECT.h;
+            photoX = RIGHT_RECT.x + Math.floor((rw - img.width) / 2);
+            photoY = RIGHT_RECT.y + Math.floor((rh - img.height) / 2);
+          }
           URL.revokeObjectURL(url);
         });
       }
     });
 
-    document.getElementById('nameInput').addEventListener('input', () => {
-      let name = document.getElementById('nameInput').value.toUpperCase();
-      nameLetters = name.split('');
+    document.getElementById('sizeSlider').addEventListener('input', e => {
+      photoScale = parseFloat(e.target.value);
     });
-
-    document.getElementById('sizeSlider').addEventListener('input', e => photoScale = parseFloat(e.target.value));
 
     document.getElementById('download').addEventListener('click', () => {
-      let name = document.getElementById('nameInput').value.trim().toUpperCase().replace(/ /g, '_') || 'multipass';
-      saveCanvas(name, 'png');
+      let name = (document.getElementById('nameInput').value.trim().toUpperCase() || 'MULTIPASS').replace(/ /g, '_');
+      saveCanvas(name + '_multipass_card', 'png');
     });
 
-    function mousePressed() { if (photoImg) { isDragging = true; dragOffsetX = mouseX - photoX; dragOffsetY = mouseY - photoY; }}
-    function mouseDragged() { if (isDragging) { photoX = mouseX - dragOffsetX; photoY = mouseY - dragOffsetY; }}
+    function mousePressed() {
+      if (photoImg) {
+        isDragging = true;
+        dragOffsetX = mouseX - photoX;
+        dragOffsetY = mouseY - photoY;
+      }
+    }
+    function mouseDragged() {
+      if (isDragging && photoImg) {
+        photoX = mouseX - dragOffsetX;
+        photoY = mouseY - dragOffsetY;
+      }
+    }
     function mouseReleased() { isDragging = false; }
-    function mouseWheel(e) { if (photoImg) photoScale *= e.delta > 0 ? 0.95 : 1.05; }
+
+    function mouseWheel(e) {
+      if (photoImg) {
+        let factor = e.delta > 0 ? 0.95 : 1.05;
+        photoScale = Math.max(0.3, Math.min(3.0, photoScale * factor));
+        document.getElementById('sizeSlider').value = photoScale;
+        return false;
+      }
+    }
 
     function keyPressed() {
       if (!photoImg) return;
-      let step = 5;
-      if (keyCode === LEFT_ARROW) photoX -= step;
+      let step = 4;
+      if (keyCode === LEFT_ARROW)  photoX -= step;
       if (keyCode === RIGHT_ARROW) photoX += step;
-      if (keyCode === UP_ARROW) photoY -= step;
-      if (keyCode === DOWN_ARROW) photoY += step;
+      if (keyCode === UP_ARROW)    photoY -= step;
+      if (keyCode === DOWN_ARROW)  photoY += step;
+    }
+
+    function mouseClicked() {
+      if (photoImg && keyIsDown(16)) {
+        let rw = RIGHT_RECT.w, rh = RIGHT_RECT.h;
+        photoX = RIGHT_RECT.x + Math.floor((rw - photoImg.width * photoScale) / 2);
+        photoY = RIGHT_RECT.y + Math.floor((rh - photoImg.height * photoScale) / 2);
+      }
     }
   </script>
 </body>

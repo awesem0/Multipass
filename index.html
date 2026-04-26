@@ -157,9 +157,8 @@
       <!-- Example card shown before template is uploaded.
            Plain <img> — never painted on canvas — so canvas.toDataURL() stays clean. -->
       <img id="placeholder-img"
-           src="https://raw.githubusercontent.com/awesem0/Multipass/0e00515cd0cd581340f11c57f96212985759b4cc/LEELOO%20DALLAS_multipass_card.png"
-           alt="Example Multipass card"
-           crossorigin="anonymous">
+           src="https://raw.githubusercontent.com/awesem0/Multipass/84cf4e8cb8b7ac4f10a65e5731502c207f97a9c2/LEELOO%20DALLAS_multipass_card.png"
+           alt="Example Multipass card">
 
       <!-- 1010×638 internal, displayed at 541×341 via CSS -->
       <canvas id="card-canvas" width="1010" height="638"></canvas>
@@ -200,7 +199,7 @@
   </div>
 
   <div class="video-wrap">
-    <iframe src="https://youtu.be/5GGTjFU8BCg" allowfullscreen></iframe>
+    <iframe src="https://www.youtube.com/embed/5GGTjFU8BCg" allowfullscreen></iframe>
   </div>
 
   <script>
@@ -364,6 +363,12 @@
     //    5. Name           → above everything
     // ═══════════════════════════════════════════════════════════════════
     function render() {
+      // No template yet → stay fully transparent so the placeholder <img> shows through
+      if (!templateImg) {
+        ctx.clearRect(0, 0, CW, CH);
+        return;
+      }
+
       ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, CW, CH);
 
@@ -373,10 +378,8 @@
         ctx.drawImage(right,                RIGHT_RECT.x, RIGHT_RECT.y);
       }
 
-      if (templateImg) {
-        ctx.drawImage(templateImg, 0, 0, CW, CH);
-        renderName();   // name always on top
-      }
+      ctx.drawImage(templateImg, 0, 0, CW, CH);
+      renderName();   // name always on top
     }
 
     function loop() { render(); requestAnimationFrame(loop); }

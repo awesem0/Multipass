@@ -3,589 +3,522 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Multipass Calibrator + Generator</title>
+  <title>Multipass Card Customizer</title>
   <style>
-    body { background: #111; color: #f0f0f0; font-family: system-ui, Arial, sans-serif; padding: 20px; }
-    .container { max-width: 1200px; margin: 0 auto; }
-    .row { display: flex; gap: 30px; flex-wrap: wrap; }
-    #canvas-wrap { position: relative; width: 540px; height: 341px; border-radius: 12px; overflow: hidden; box-shadow: 0 0 0 1px #333; }
-    #card-canvas { width: 540px; height: 341px; display: block; cursor: crosshair; }
-    .controls { width: 320px; }
-    .btn { background: #3b82f6; color: white; border: none; padding: 12px 18px; border-radius: 8px; cursor: pointer; font-weight: 700; margin: 6px 0; width: 100%; }
-    .btn.secondary { background: #262626; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #111;
+      color: #f0f0f0;
+      font-family: Arial, sans-serif;
+      min-height: 100vh;
+      padding: 40px 20px 60px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+    }
+
+    h1 {
+      font-size: 13px;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: #555;
+      font-weight: 400;
+    }
+
+    .tool-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+      width: 100%;
+      max-width: 900px;
+    }
+
+    /* ── Canvas wrapper ──────────────────────────────── */
+    /*
+      Canvas internal: 1010 × 638 px (real template resolution)
+      CSS display:      ~541 × 341 px  (ratio 1010/638 = 1.584)
+    */
+    #canvas-wrap {
+      position: relative;
+      width:  541px;
+      height: 341px;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 0 0 1px #2a2a2a, 0 24px 60px rgba(0,0,0,0.85);
+      flex-shrink: 0;
+      background: #000;
+    }
+
+    #card-canvas {
+      display: block;
+      width:  541px;
+      height: 341px;
+      cursor: grab;
+      user-select: none;
+      position: relative;
+      z-index: 1;
+    }
+    #card-canvas:active { cursor: grabbing; }
+
+    /* Placeholder sits behind canvas (z 0). Never drawn on canvas → no CORS taint. */
+    #placeholder-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 0;
+      display: block;
+      pointer-events: none;
+    }
+
+    /* ── Controls ─────────────────────────────────────── */
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 270px;
+    }
+
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 13px 18px;
+      background: #3b82f6;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      text-align: center;
+      text-decoration: none;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
     .btn:hover { background: #2563eb; }
-    .section { background: #1c1c1c; padding: 16px; border-radius: 12px; margin-bottom: 20px; }
-    textarea { width: 100%; height: 140px; background: #111; color: #0f0; font-family: monospace; font-size: 13px; border: 1px solid #333; padding: 10px; border-radius: 8px; }
-    .hint { font-size: 12px; color: #666; }
-    .calib-instructions { background: #1a2a1a; padding: 12px; border-radius: 8px; margin: 12px 0; font-size: 13px; }
-    .corner { position: absolute; width: 14px; height: 14px; background: #22d3ee; border: 2px solid white; border-radius: 50%; cursor: move; z-index: 20; box-shadow: 0 0 8px #22d3ee; }
-    .rect-label { position: absolute; background: rgba(34,211,238,0.9); color: #000; font-size: 10px; padding: 1px 6px; border-radius: 3px; z-index: 15; pointer-events: none; }
+    .btn.secondary { background: #262626; }
+    .btn.secondary:hover { background: #333; }
+    label.btn { display: block; }
+
+    .divider { height: 1px; background: #2a2a2a; margin: 4px 0; }
+
+    #extra-controls { display: none; flex-direction: column; gap: 10px; }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 11px 14px;
+      font-size: 16px;
+      font-weight: 600;
+      background: #1c1c1c;
+      color: #f0f0f0;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input[type="text"]:focus { border-color: #3b82f6; }
+    input[type="text"]::placeholder { color: #444; font-weight: 400; }
+
+    .slider-row { display: flex; flex-direction: column; gap: 4px; }
+    .slider-row label {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #555;
+    }
+    input[type="range"] { width: 100%; accent-color: #3b82f6; cursor: pointer; }
+
+    .hint { font-size: 11px; color: #444; text-align: center; line-height: 1.6; }
+
+    /* ── Video ────────────────────────────────────────── */
+    .video-wrap {
+      width: 100%;
+      max-width: 900px;
+      border-radius: 12px;
+      overflow: hidden;
+      aspect-ratio: 16/9;
+      box-shadow: 0 0 0 1px #2a2a2a;
+    }
+    .video-wrap iframe { width: 100%; height: 100%; border: none; display: block; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Multipass Card Generator + Calibrator</h1>
-    <p style="color:#666; max-width:700px;">Upload your template → Calibrate the 3 areas by dragging the blue dots → Copy the coordinates → Paste them below or send to me.</p>
 
-    <div class="row">
-      <!-- Canvas -->
-      <div>
-        <div id="canvas-wrap">
-          <canvas id="card-canvas" width="1010" height="638"></canvas>
-          <!-- Calibration overlays will be added here dynamically -->
-        </div>
-        <div style="margin-top:8px; font-size:12px; color:#666;">
-          Internal: 1010×638 px (full template resolution)
-        </div>
-      </div>
+  <h1>Multipass Card Customizer</h1>
 
-      <!-- Controls -->
-      <div class="controls">
-        <div class="section">
-          <button id="calibBtn" class="btn">🔧 CALIBRATE PHOTO & NAME AREAS</button>
-          <button id="demoBtn" class="btn secondary">Load Demo (Leeloo)</button>
-          <button id="resetBtn" class="btn secondary">Reset to Default</button>
+  <div class="tool-row">
 
-          <div style="margin:16px 0 8px;">
-            <label style="font-size:11px; color:#888;">UPLOAD TEMPLATE</label>
-            <input type="file" id="templateUpload" accept="image/*" style="width:100%; padding:8px; background:#262626; color:#fff; border:none; border-radius:6px;">
-          </div>
-        </div>
+    <div id="canvas-wrap">
+      <!-- Example card shown before template is uploaded.
+           Plain <img> — never painted on canvas — so canvas.toDataURL() stays clean. -->
+      <img id="placeholder-img"
+           src="https://raw.githubusercontent.com/awesem0/Multipass/0e00515cd0cd581340f11c57f96212985759b4cc/LEELOO%20DALLAS_multipass_card.png"
+           alt="Example Multipass card"
+           crossorigin="anonymous">
 
-        <div class="section" id="calibPanel" style="display:none;">
-          <div class="calib-instructions">
-            <strong>Calibration Mode Active</strong><br>
-            Drag the <span style="color:#22d3ee;">blue dots</span> to define the 3 areas.<br>
-            Left = Negative (blue)<br>
-            Right = Normal photo<br>
-            Bottom = Name text area
-          </div>
+      <!-- 1010×638 internal, displayed at 541×341 via CSS -->
+      <canvas id="card-canvas" width="1010" height="638"></canvas>
+    </div>
 
-          <div>
-            <label style="font-size:11px; color:#888;">LIVE COORDINATES (copy this)</label>
-            <textarea id="coordOutput" readonly></textarea>
-          </div>
+    <div class="controls">
+      <a href="https://dailyprintdelights.etsy.com" target="_blank" class="btn">Buy Templates</a>
 
-          <button id="copyBtn" class="btn">📋 COPY JSON TO CLIPBOARD</button>
-          <button id="exitCalibBtn" class="btn secondary">Exit Calibration</button>
+      <label class="btn secondary">
+        Upload Template
+        <input type="file" id="templateUpload" accept="image/*" style="display:none">
+      </label>
+
+      <div id="extra-controls">
+        <div class="divider"></div>
+
+        <label class="btn secondary">
+          Upload Photo
+          <input type="file" id="photoUpload" accept="image/*" style="display:none">
+        </label>
+
+        <input type="text" id="nameInput" placeholder="Enter full name" maxlength="40" autocomplete="off">
+
+        <div class="slider-row">
+          <label>Photo size</label>
+          <input type="range" id="sizeSlider" min="0.05" max="5" step="0.01" value="1.0">
         </div>
 
-        <div class="section" id="mainControls" style="display:none;">
-          <input type="text" id="nameInput" placeholder="ENTER FULL NAME" style="width:100%; padding:12px; background:#1c1c1c; color:#fff; border:1px solid #333; border-radius:8px; font-size:15px; margin-bottom:10px;">
-          
-          <div>
-            <label style="font-size:11px; color:#888;">PHOTO SIZE</label>
-            <input type="range" id="sizeSlider" min="0.05" max="5" step="0.01" value="1" style="width:100%;">
-          </div>
+        <button id="downloadBtn" class="btn">Download Card</button>
 
-          <button id="photoUploadBtn" class="btn">UPLOAD PHOTO</button>
-          <button id="downloadBtn" class="btn">DOWNLOAD CARD + REAR</button>
-        </div>
+        <p class="hint">
+          Drag to reposition · Scroll / pinch to zoom<br>
+          Arrow keys for fine nudge · No data is saved.
+        </p>
       </div>
     </div>
 
-    <div style="margin-top:30px; font-size:12px; color:#555; max-width:700px;">
-      Once you have the correct coordinates from calibration, send them to me and I'll hardcode them permanently.
-    </div>
+  </div>
+
+  <div class="video-wrap">
+    <iframe src="https://www.youtube.com/embed/USozvRE2INs" allowfullscreen></iframe>
   </div>
 
   <script>
-    const CW = 1010, CH = 638;
-    const canvas = document.getElementById('card-canvas');
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    const wrap = document.getElementById('canvas-wrap');
+    // ═══════════════════════════════════════════════════════════════════
+    //  GEOMETRY — exact values from multipass_corners.txt
+    //  All coordinates are in the real 1010 × 638 canvas space.
+    //
+    //  Derived via get_rect(corners):
+    //    xs = [p[0] for p in pts], ys = [p[1] for p in pts]
+    //    rect = { x: min(xs), y: min(ys), w: max(xs)-min(xs), h: max(ys)-min(ys) }
+    //
+    //  Name paste position:
+    //    paste_x = name_rect.x - 8 + NAME_X_NUDGE  →  549.9 - 8 + 2  = 543.9
+    //    paste_y = name_rect.y - 10 + NAME_Y_NUDGE →  118.1 - 10 + 15 = 123.1
+    // ═══════════════════════════════════════════════════════════════════
 
+    const CW = 1010, CH = 638;
+
+    // Left rect  — negative / blue-LUT photo
+    const LEFT_RECT  = { x: 20.6,  y: 120.0, w: 243.1, h: 349.9 };
+    // Right rect — normal colour photo
+    const RIGHT_RECT = { x: 288.0, y: 120.0, w: 243.1, h: 348.0 };
+    // Name rect  — TOP-RIGHT of card
+    const NAME_RECT  = { x: 549.9, y: 118.1, w: 439.5, h: 52.4  };
+
+    // Python name paste coords (already in 1010×638 space)
+    const NAME_PASTE_X = 543.9;
+    const NAME_PASTE_Y = 123.1;
+    const NAME_FONT_SZ = 65;     // same as Python — the rect height is 52 px so
+                                  // the font intentionally overflows slightly
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  State
+    // ═══════════════════════════════════════════════════════════════════
     let templateImg = null, photoImg = null;
     let photoX = 0, photoY = 0, photoScale = 1.0;
-    let isDragging = false, dragStartX = 0, dragStartY = 0, dragPhotoX0 = 0, dragPhotoY0 = 0;
+    let isDragging = false;
+    let dragStartX = 0, dragStartY = 0, dragPhotoX0 = 0, dragPhotoY0 = 0;
+    let lastTouchDist = null;
 
-    // Current calibration rects (will be updated live)
-    let LEFT_RECT = { x: 85, y: 145, w: 225, h: 285 };
-    let RIGHT_RECT = { x: 355, y: 145, w: 225, h: 285 };
-    let NAME_RECT = { x: 600, y: 35, w: 380, h: 75 };
+    // ═══════════════════════════════════════════════════════════════════
+    //  Canvas
+    // ═══════════════════════════════════════════════════════════════════
+    const canvas = document.getElementById('card-canvas');
+    const ctx    = canvas.getContext('2d', { willReadFrequently: true });
 
-    let calibMode = false;
-    let activeHandle = null;
-    let handles = []; // array of {rect: 'left'|'right'|'name', corner: 0-3, x, y, el}
-
-    function updateCoordOutput() {
-      const json = {
-        left_negative: [
-          [LEFT_RECT.x, LEFT_RECT.y],
-          [LEFT_RECT.x + LEFT_RECT.w, LEFT_RECT.y],
-          [LEFT_RECT.x + LEFT_RECT.w, LEFT_RECT.y + LEFT_RECT.h],
-          [LEFT_RECT.x, LEFT_RECT.y + LEFT_RECT.h]
-        ],
-        right_normal: [
-          [RIGHT_RECT.x, RIGHT_RECT.y],
-          [RIGHT_RECT.x + RIGHT_RECT.w, RIGHT_RECT.y],
-          [RIGHT_RECT.x + RIGHT_RECT.w, RIGHT_RECT.y + RIGHT_RECT.h],
-          [RIGHT_RECT.x, RIGHT_RECT.y + RIGHT_RECT.h]
-        ],
-        name: [
-          [NAME_RECT.x, NAME_RECT.y],
-          [NAME_RECT.x + NAME_RECT.w, NAME_RECT.y],
-          [NAME_RECT.x + NAME_RECT.w, NAME_RECT.y + NAME_RECT.h],
-          [NAME_RECT.x, NAME_RECT.y + NAME_RECT.h]
-        ]
-      };
-      document.getElementById('coordOutput').value = JSON.stringify(json, null, 2);
-    }
-
-    function draw() {
-      ctx.fillStyle = '#000';
-      ctx.fillRect(0, 0, CW, CH);
-
-      if (photoImg && !calibMode) {
-        // Normal render
-        const right = makeTempCanvas(RIGHT_RECT.w, RIGHT_RECT.h);
-        const rctx = right.getContext('2d');
-        const dims = getPhotoDims(photoImg);
-        rctx.drawImage(photoImg, photoX - RIGHT_RECT.x, photoY - RIGHT_RECT.y, dims.w * photoScale, dims.h * photoScale);
-
-        const neg = buildNegative(right);
-        ctx.drawImage(neg, LEFT_RECT.x, LEFT_RECT.y);
-        ctx.drawImage(right, RIGHT_RECT.x, RIGHT_RECT.y);
-      }
-
-      if (templateImg) {
-        ctx.drawImage(templateImg, 0, 0, CW, CH);
-      } else if (!calibMode) {
-        // Show placeholder message
-        ctx.fillStyle = '#333';
-        ctx.font = 'bold 28px system-ui';
-        ctx.fillText('UPLOAD TEMPLATE OR LOAD DEMO', 220, 320);
-      }
-
-      if (!calibMode && (templateImg || photoImg)) {
-        renderName();
-      }
-
-      if (calibMode) {
-        drawCalibrationOverlays();
-      }
-    }
-
-    function drawCalibrationOverlays() {
-      ctx.strokeStyle = '#22d3ee';
-      ctx.lineWidth = 3;
-      ctx.setLineDash([6, 3]);
-
-      // Left
-      ctx.strokeRect(LEFT_RECT.x, LEFT_RECT.y, LEFT_RECT.w, LEFT_RECT.h);
-      ctx.fillStyle = 'rgba(34,211,238,0.2)';
-      ctx.fillRect(LEFT_RECT.x, LEFT_RECT.y, LEFT_RECT.w, LEFT_RECT.h);
-
-      // Right
-      ctx.strokeRect(RIGHT_RECT.x, RIGHT_RECT.y, RIGHT_RECT.w, RIGHT_RECT.h);
-      ctx.fillStyle = 'rgba(34,211,238,0.2)';
-      ctx.fillRect(RIGHT_RECT.x, RIGHT_RECT.y, RIGHT_RECT.w, RIGHT_RECT.h);
-
-      // Name
-      ctx.strokeRect(NAME_RECT.x, NAME_RECT.y, NAME_RECT.w, NAME_RECT.h);
-      ctx.fillStyle = 'rgba(251,191,36,0.25)';
-      ctx.fillRect(NAME_RECT.x, NAME_RECT.y, NAME_RECT.w, NAME_RECT.h);
-
-      ctx.setLineDash([]);
-      ctx.lineWidth = 1;
-
-      // Labels
-      ctx.fillStyle = '#22d3ee';
-      ctx.font = 'bold 14px system-ui';
-      ctx.fillText('LEFT (NEGATIVE)', LEFT_RECT.x + 8, LEFT_RECT.y - 8);
-      ctx.fillText('RIGHT (NORMAL)', RIGHT_RECT.x + 8, RIGHT_RECT.y - 8);
-      ctx.fillStyle = '#fbbf24';
-      ctx.fillText('NAME (RED TEXT)', NAME_RECT.x + 8, NAME_RECT.y - 8);
-    }
-
-    function createHandle(rectName, corner, x, y) {
-      const el = document.createElement('div');
-      el.className = 'corner';
-      el.style.left = (x * 540 / CW) + 'px';
-      el.style.top = (y * 341 / CH) + 'px';
-      el.dataset.rect = rectName;
-      el.dataset.corner = corner;
-
-      el.addEventListener('mousedown', startHandleDrag);
-      wrap.appendChild(el);
-      return el;
-    }
-
-    function updateHandles() {
-      // Remove old handles
-      document.querySelectorAll('.corner').forEach(el => el.remove());
-
-      handles = [];
-
-      // Left rect - 4 corners
-      const l = LEFT_RECT;
-      handles.push({rect: 'left', corner: 0, x: l.x, y: l.y, el: createHandle('left', 0, l.x, l.y)});
-      handles.push({rect: 'left', corner: 1, x: l.x + l.w, y: l.y, el: createHandle('left', 1, l.x + l.w, l.y)});
-      handles.push({rect: 'left', corner: 2, x: l.x + l.w, y: l.y + l.h, el: createHandle('left', 2, l.x + l.w, l.y + l.h)});
-      handles.push({rect: 'left', corner: 3, x: l.x, y: l.y + l.h, el: createHandle('left', 3, l.x, l.y + l.h)});
-
-      // Right rect
-      const r = RIGHT_RECT;
-      handles.push({rect: 'right', corner: 0, x: r.x, y: r.y, el: createHandle('right', 0, r.x, r.y)});
-      handles.push({rect: 'right', corner: 1, x: r.x + r.w, y: r.y, el: createHandle('right', 1, r.x + r.w, r.y)});
-      handles.push({rect: 'right', corner: 2, x: r.x + r.w, y: r.y + r.h, el: createHandle('right', 2, r.x + r.w, r.y + r.h)});
-      handles.push({rect: 'right', corner: 3, x: r.x, y: r.y + r.h, el: createHandle('right', 3, r.x, r.y + r.h)});
-
-      // Name rect
-      const n = NAME_RECT;
-      handles.push({rect: 'name', corner: 0, x: n.x, y: n.y, el: createHandle('name', 0, n.x, n.y)});
-      handles.push({rect: 'name', corner: 1, x: n.x + n.w, y: n.y, el: createHandle('name', 1, n.x + n.w, n.y)});
-      handles.push({rect: 'name', corner: 2, x: n.x + n.w, y: n.y + n.h, el: createHandle('name', 2, n.x + n.w, n.y + n.h)});
-      handles.push({rect: 'name', corner: 3, x: n.x, y: n.y + n.h, el: createHandle('name', 3, n.x, n.y + n.h)});
-
-      updateCoordOutput();
-    }
-
-    let currentDragHandle = null;
-
-    function startHandleDrag(e) {
-      currentDragHandle = e.currentTarget;
-      document.addEventListener('mousemove', dragHandle);
-      document.addEventListener('mouseup', endHandleDrag, { once: true });
-    }
-
-    function dragHandle(e) {
-      if (!currentDragHandle || !calibMode) return;
-
-      const rect = canvas.getBoundingClientRect();
-      const scaleX = CW / rect.width;
-      const scaleY = CH / rect.height;
-
-      let newX = (e.clientX - rect.left) * scaleX;
-      let newY = (e.clientY - rect.top) * scaleY;
-
-      const rectName = currentDragHandle.dataset.rect;
-      const corner = parseInt(currentDragHandle.dataset.corner);
-
-      let targetRect;
-      if (rectName === 'left') targetRect = LEFT_RECT;
-      else if (rectName === 'right') targetRect = RIGHT_RECT;
-      else targetRect = NAME_RECT;
-
-      // Update the corner position
-      if (corner === 0) { // top-left
-        targetRect.w = targetRect.x + targetRect.w - newX;
-        targetRect.h = targetRect.y + targetRect.h - newY;
-        targetRect.x = newX;
-        targetRect.y = newY;
-      } else if (corner === 1) { // top-right
-        targetRect.w = newX - targetRect.x;
-        targetRect.h = targetRect.y + targetRect.h - newY;
-        targetRect.y = newY;
-      } else if (corner === 2) { // bottom-right
-        targetRect.w = newX - targetRect.x;
-        targetRect.h = newY - targetRect.y;
-      } else if (corner === 3) { // bottom-left
-        targetRect.w = targetRect.x + targetRect.w - newX;
-        targetRect.h = newY - targetRect.y;
-        targetRect.x = newX;
-      }
-
-      // Clamp to canvas
-      targetRect.x = Math.max(0, Math.min(targetRect.x, CW - 20));
-      targetRect.y = Math.max(0, Math.min(targetRect.y, CH - 20));
-      targetRect.w = Math.max(40, Math.min(targetRect.w, CW - targetRect.x));
-      targetRect.h = Math.max(30, Math.min(targetRect.h, CH - targetRect.y));
-
-      updateHandles();
-      draw();
-    }
-
-    function endHandleDrag() {
-      currentDragHandle = null;
-      document.removeEventListener('mousemove', dragHandle);
-      updateCoordOutput();
-    }
-
-    function enterCalibrationMode() {
-      calibMode = true;
-      document.getElementById('calibPanel').style.display = 'block';
-      document.getElementById('mainControls').style.display = 'none';
-
-      // Show current template or demo
-      if (!templateImg) {
-        loadDemo(true); // silent load
-      }
-
-      updateHandles();
-      draw();
-      updateCoordOutput();
-    }
-
-    function exitCalibrationMode() {
-      calibMode = false;
-      document.getElementById('calibPanel').style.display = 'none';
-      document.getElementById('mainControls').style.display = 'block';
-
-      // Remove all handles
-      document.querySelectorAll('.corner').forEach(el => el.remove());
-      handles = [];
-
-      draw();
-    }
-
-    function makeTempCanvas(w, h) {
+    // ═══════════════════════════════════════════════════════════════════
+    //  Helpers
+    // ═══════════════════════════════════════════════════════════════════
+    function makeTmp(w, h) {
       const c = document.createElement('canvas');
       c.width = w; c.height = h;
       return c;
     }
 
-    function getPhotoDims(img) {
-      return { w: img.naturalWidth || img.width || 0, h: img.naturalHeight || img.height || 0 };
+    /**
+     * Returns a (RIGHT_RECT.w × RIGHT_RECT.h) canvas with the photo clipped to
+     * RIGHT_RECT — equivalent to Python's normal_patch.
+     */
+    function buildRightCanvas() {
+      const { x: rx, y: ry, w: rw, h: rh } = RIGHT_RECT;
+      const c  = makeTmp(rw, rh);
+      c.getContext('2d').drawImage(
+        photoImg,
+        photoX - rx, photoY - ry,
+        photoImg.naturalWidth  * photoScale,
+        photoImg.naturalHeight * photoScale
+      );
+      return c;
     }
 
+    /**
+     * Python's build_negative():
+     *   1. Copy/resize src to LEFT_RECT dimensions (same size — 1:1 copy)
+     *   2. Invert pixels  (ImageOps.invert)
+     *   3. Gaussian blur 1.5 px  (GaussianBlur)
+     *   4. Mirror horizontally  (ImageOps.mirror)
+     *   5. Blue-white LUT: R = G = luminance, B = 255
+     */
     function buildNegative(rightCanvas) {
       const { w, h } = LEFT_RECT;
-      const s1 = makeTempCanvas(w, h);
+
+      // 1. Copy (both rects same size, 243×349)
+      const s1 = makeTmp(w, h);
       s1.getContext('2d').drawImage(rightCanvas, 0, 0, w, h);
 
-      const s2 = makeTempCanvas(w, h);
+      // 2. Invert
+      const s2 = makeTmp(w, h);
       const c2 = s2.getContext('2d', { willReadFrequently: true });
       c2.drawImage(s1, 0, 0);
       const id2 = c2.getImageData(0, 0, w, h);
       for (let i = 0; i < id2.data.length; i += 4) {
-        id2.data[i] = 255 - id2.data[i];
+        id2.data[i]   = 255 - id2.data[i];
         id2.data[i+1] = 255 - id2.data[i+1];
         id2.data[i+2] = 255 - id2.data[i+2];
       }
       c2.putImageData(id2, 0, 0);
 
-      const s3 = makeTempCanvas(w, h);
+      // 3. Blur 1.5 px
+      const s3 = makeTmp(w, h);
       const c3 = s3.getContext('2d');
       c3.filter = 'blur(1.5px)';
       c3.drawImage(s2, 0, 0);
-      c3.filter = 'none';
 
-      const s4 = makeTempCanvas(w, h);
+      // 4. Mirror horizontally
+      const s4 = makeTmp(w, h);
       const c4 = s4.getContext('2d', { willReadFrequently: true });
-      c4.translate(w, 0); c4.scale(-1, 1);
+      c4.translate(w, 0);
+      c4.scale(-1, 1);
       c4.drawImage(s3, 0, 0);
       c4.setTransform(1, 0, 0, 1, 0, 0);
 
+      // 5. Blue-white LUT: R = G = luminance, B always 255
       const id4 = c4.getImageData(0, 0, w, h);
       for (let i = 0; i < id4.data.length; i += 4) {
         const lum = Math.round((id4.data[i] + id4.data[i+1] + id4.data[i+2]) / 3);
-        id4.data[i] = lum; id4.data[i+1] = lum; id4.data[i+2] = 255;
+        id4.data[i]   = lum;
+        id4.data[i+1] = lum;
+        id4.data[i+2] = 255;
       }
       c4.putImageData(id4, 0, 0);
+
       return s4;
     }
 
+    /**
+     * Name text — matches Python's render_name_on():
+     *   Font:    Arial Narrow Bold, NAME_FONT_SZ px
+     *   Colour:  rgb(255, 30, 30)
+     *   Anchor:  top-left at (NAME_PASTE_X, NAME_PASTE_Y)  ← TOP-RIGHT of card
+     *   Squish:  if text wider than NAME_RECT.w, scale X only (like PIL resize)
+     */
     function renderName() {
       const name = document.getElementById('nameInput').value.toUpperCase().trim();
       if (!name) return;
 
       ctx.save();
       ctx.textBaseline = 'top';
-      ctx.fillStyle = 'rgb(255, 30, 30)';
-      ctx.font = `bold 65px "Arial Narrow", Impact, Arial, sans-serif`;
+      ctx.fillStyle    = 'rgb(255, 30, 30)';
+      ctx.font         = `bold ${NAME_FONT_SZ}px "Arial Narrow", Arial, sans-serif`;
 
       const textW = ctx.measureText(name).width;
-      const maxW = NAME_RECT.w;
+      const maxW  = NAME_RECT.w;
 
       if (textW > maxW) {
-        ctx.translate(NAME_PASTE_X || 594, NAME_PASTE_Y || 40);
+        ctx.translate(NAME_PASTE_X, NAME_PASTE_Y);
         ctx.scale(maxW / textW, 1);
         ctx.fillText(name, 0, 0);
       } else {
-        ctx.fillText(name, NAME_PASTE_X || 594, NAME_PASTE_Y || 40);
+        ctx.fillText(name, NAME_PASTE_X, NAME_PASTE_Y);
       }
       ctx.restore();
     }
 
-    function loop() {
-      draw();
-      requestAnimationFrame(loop);
+    // ═══════════════════════════════════════════════════════════════════
+    //  Render — Python composite order:
+    //    1. Black base
+    //    2. Negative photo → LEFT_RECT   (under template)
+    //    3. Normal photo   → RIGHT_RECT  (under template)
+    //    4. Template       → full canvas (alpha_composite on top)
+    //    5. Name           → above everything
+    // ═══════════════════════════════════════════════════════════════════
+    function render() {
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, CW, CH);
+
+      if (photoImg) {
+        const right = buildRightCanvas();
+        ctx.drawImage(buildNegative(right), LEFT_RECT.x,  LEFT_RECT.y);
+        ctx.drawImage(right,                RIGHT_RECT.x, RIGHT_RECT.y);
+      }
+
+      if (templateImg) {
+        ctx.drawImage(templateImg, 0, 0, CW, CH);
+        renderName();   // name always on top
+      }
     }
+
+    function loop() { render(); requestAnimationFrame(loop); }
     loop();
 
-    // Event listeners
-    document.getElementById('calibBtn').addEventListener('click', enterCalibrationMode);
-    document.getElementById('exitCalibBtn').addEventListener('click', exitCalibrationMode);
-    document.getElementById('copyBtn').addEventListener('click', () => {
-      const ta = document.getElementById('coordOutput');
-      ta.select();
-      document.execCommand('copy');
-      alert('Coordinates copied! Send them to me.');
-    });
+    // ═══════════════════════════════════════════════════════════════════
+    //  File loading helper
+    // ═══════════════════════════════════════════════════════════════════
+    function loadImageFile(file, cb) {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload  = () => { cb(img); URL.revokeObjectURL(url); };
+      img.onerror = () => { URL.revokeObjectURL(url); alert('Could not load image.'); };
+      img.src = url;
+    }
 
-    document.getElementById('demoBtn').addEventListener('click', () => loadDemo(false));
-    document.getElementById('resetBtn').addEventListener('click', () => {
-      LEFT_RECT = { x: 85, y: 145, w: 225, h: 285 };
-      RIGHT_RECT = { x: 355, y: 145, w: 225, h: 285 };
-      NAME_RECT = { x: 600, y: 35, w: 380, h: 75 };
-      if (calibMode) updateHandles();
-      draw();
-    });
-
+    // ── Template upload ──────────────────────────────────────────────
     document.getElementById('templateUpload').addEventListener('change', e => {
       if (!e.target.files[0]) return;
-      const url = URL.createObjectURL(e.target.files[0]);
-      const img = new Image();
-      img.onload = () => {
+      loadImageFile(e.target.files[0], img => {
         templateImg = img;
-        URL.revokeObjectURL(url);
-        if (calibMode) updateHandles();
-        draw();
-      };
-      img.src = url;
+        document.getElementById('placeholder-img').style.display = 'none';
+        document.getElementById('extra-controls').style.display  = 'flex';
+      });
     });
 
-    document.getElementById('photoUploadBtn').addEventListener('click', () => {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = 'image/*';
-      input.onchange = e => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const url = URL.createObjectURL(file);
-        const img = new Image();
-        img.onload = () => {
-          photoImg = img;
-          photoScale = 1.0;
-          document.getElementById('sizeSlider').value = 1.0;
-          const dims = getPhotoDims(photoImg);
-          photoX = RIGHT_RECT.x + (RIGHT_RECT.w - dims.w) / 2;
-          photoY = RIGHT_RECT.y + (RIGHT_RECT.h - dims.h) / 2;
-          URL.revokeObjectURL(url);
-          draw();
-        };
-        img.src = url;
-      };
-      input.click();
+    // ── Photo upload — centred in RIGHT_RECT at scale 1.0 (like Python) ─
+    document.getElementById('photoUpload').addEventListener('change', e => {
+      if (!e.target.files[0]) return;
+      loadImageFile(e.target.files[0], img => {
+        photoImg   = img;
+        photoScale = 1.0;
+        document.getElementById('sizeSlider').value = 1.0;
+        // Python: photo_offset_x = right_rect[0] + (rw - img.width) // 2
+        photoX = RIGHT_RECT.x + (RIGHT_RECT.w - img.naturalWidth)  / 2;
+        photoY = RIGHT_RECT.y + (RIGHT_RECT.h - img.naturalHeight) / 2;
+      });
     });
 
+    // ── Slider ───────────────────────────────────────────────────────
     document.getElementById('sizeSlider').addEventListener('input', e => {
       photoScale = parseFloat(e.target.value);
     });
 
+    function syncSlider() {
+      const s = document.getElementById('sizeSlider');
+      s.value = Math.min(+s.max, Math.max(+s.min, photoScale));
+    }
+
+    // ── Download — full 1010×638 PNG ─────────────────────────────────
     document.getElementById('downloadBtn').addEventListener('click', () => {
       render();
       const name = (document.getElementById('nameInput').value.trim().toUpperCase().replace(/ /g, '_')) || 'MULTIPASS';
       const a = document.createElement('a');
       a.download = name + '_multipass_card.png';
-      a.href = canvas.toDataURL('image/png');
+      a.href     = canvas.toDataURL('image/png');
       a.click();
     });
 
-    // Mouse drag for photo (when not in calib mode)
+    // ═══════════════════════════════════════════════════════════════════
+    //  Input coord conversion: CSS pixels → 1010×638 canvas pixels
+    // ═══════════════════════════════════════════════════════════════════
+    function toCanvas(cx, cy) {
+      const r = canvas.getBoundingClientRect();
+      return {
+        x: (cx - r.left) * (CW / r.width),
+        y: (cy - r.top)  * (CH / r.height)
+      };
+    }
+
+    // ── Mouse drag ───────────────────────────────────────────────────
     canvas.addEventListener('mousedown', e => {
-      if (calibMode || !photoImg) return;
+      if (!photoImg) return;
       isDragging = true;
-      const rect = canvas.getBoundingClientRect();
-      const scaleX = CW / rect.width;
-      const scaleY = CH / rect.height;
-      dragStartX = (e.clientX - rect.left) * scaleX;
-      dragStartY = (e.clientY - rect.top) * scaleY;
-      dragPhotoX0 = photoX;
-      dragPhotoY0 = photoY;
+      const p = toCanvas(e.clientX, e.clientY);
+      dragStartX = p.x; dragStartY = p.y;
+      dragPhotoX0 = photoX; dragPhotoY0 = photoY;
     });
-
     window.addEventListener('mousemove', e => {
-      if (!isDragging || calibMode) return;
-      const rect = canvas.getBoundingClientRect();
-      const scaleX = CW / rect.width;
-      const scaleY = CH / rect.height;
-      photoX = dragPhotoX0 + ((e.clientX - rect.left) * scaleX - dragStartX);
-      photoY = dragPhotoY0 + ((e.clientY - rect.top) * scaleY - dragStartY);
+      if (!isDragging) return;
+      const p = toCanvas(e.clientX, e.clientY);
+      photoX = dragPhotoX0 + (p.x - dragStartX);
+      photoY = dragPhotoY0 + (p.y - dragStartY);
     });
-
     window.addEventListener('mouseup', () => { isDragging = false; });
 
-    // Wheel zoom
+    // ── Scroll zoom ──────────────────────────────────────────────────
     canvas.addEventListener('wheel', e => {
-      if (!photoImg || calibMode) return;
+      if (!photoImg) return;
       e.preventDefault();
-      photoScale = Math.max(0.05, Math.min(20, photoScale * (e.deltaY > 0 ? 0.95 : 1.06)));
-      document.getElementById('sizeSlider').value = photoScale;
+      photoScale = Math.max(0.05, Math.min(20, photoScale * (e.deltaY > 0 ? 0.95 : 1.05)));
+      syncSlider();
     }, { passive: false });
 
-    function loadDemo(silent = false) {
-      const demo = makeTempCanvas(CW, CH);
-      const dctx = demo.getContext('2d');
-
-      const grad = dctx.createLinearGradient(0, 0, 0, CH);
-      grad.addColorStop(0, '#0a0a0f'); grad.addColorStop(1, '#1a1a2e');
-      dctx.fillStyle = grad; dctx.fillRect(0, 0, CW, CH);
-
-      dctx.strokeStyle = '#334155'; dctx.lineWidth = 1;
-      for (let x = 20; x < CW; x += 28) { dctx.beginPath(); dctx.moveTo(x, 0); dctx.lineTo(x, CH); dctx.stroke(); }
-      for (let y = 20; y < CH; y += 28) { dctx.beginPath(); dctx.moveTo(0, y); dctx.lineTo(CW, y); dctx.stroke(); }
-
-      dctx.strokeStyle = '#22d3ee'; dctx.lineWidth = 5;
-      dctx.strokeRect(LEFT_RECT.x - 4, LEFT_RECT.y - 4, LEFT_RECT.w + 8, LEFT_RECT.h + 8);
-      dctx.strokeRect(RIGHT_RECT.x - 4, RIGHT_RECT.y - 4, RIGHT_RECT.w + 8, RIGHT_RECT.h + 8);
-
-      dctx.fillStyle = '#e0f2fe'; dctx.font = 'bold 26px system-ui';
-      dctx.fillText('MULTIPASS', 32, 52);
-
-      dctx.fillStyle = '#64748b'; dctx.font = '10px monospace';
-      dctx.fillText('FEDERAL REPUBLIC OF EARTH', 32, 68);
-
-      dctx.fillStyle = '#1e2937'; dctx.fillRect(0, 580, CW, 58);
-      dctx.fillStyle = '#64748b'; dctx.font = '9px monospace';
-      dctx.fillText('PROPERTY OF THE FEDERATION • DO NOT DUPLICATE', 28, 612);
-
-      templateImg = demo;
-      if (!silent) {
-        document.getElementById('mainControls').style.display = 'block';
-        document.getElementById('nameInput').value = 'LEELOO DALLAS';
-      }
-
-      photoImg = createDemoPhoto();
-      photoScale = 0.95;
-      document.getElementById('sizeSlider').value = photoScale;
-      const dims = getPhotoDims(photoImg);
-      photoX = RIGHT_RECT.x + (RIGHT_RECT.w - dims.w) / 2;
-      photoY = RIGHT_RECT.y + (RIGHT_RECT.h - dims.h) / 2;
-
-      if (calibMode) updateHandles();
-      draw();
-    }
-
-    function createDemoPhoto() {
-      const c = makeTempCanvas(225, 285);
-      const cx = c.getContext('2d');
-      cx.fillStyle = '#1e2937'; cx.fillRect(0, 0, 225, 285);
-      cx.fillStyle = '#fed7aa';
-      cx.beginPath(); cx.ellipse(112, 130, 72, 95, 0, 0, Math.PI * 2); cx.fill();
-      cx.fillStyle = '#b91c1c';
-      cx.beginPath(); cx.ellipse(112, 85, 85, 62, 0, 0, Math.PI * 2); cx.fill();
-      cx.fillStyle = '#fff';
-      cx.beginPath(); cx.ellipse(82, 118, 16, 10, 0, 0, Math.PI * 2); cx.fill();
-      cx.beginPath(); cx.ellipse(142, 118, 16, 10, 0, 0, Math.PI * 2); cx.fill();
-      cx.fillStyle = '#1e40af';
-      cx.beginPath(); cx.ellipse(82, 118, 8, 8, 0, 0, Math.PI * 2); cx.fill();
-      cx.beginPath(); cx.ellipse(142, 118, 8, 8, 0, 0, Math.PI * 2); cx.fill();
-      cx.strokeStyle = '#9f1239'; cx.lineWidth = 3.5;
-      cx.beginPath(); cx.arc(112, 165, 20, 0.2 * Math.PI, 0.8 * Math.PI); cx.stroke();
-      return c;
-    }
-
-    // Keyboard support for fine tuning in calib mode
+    // ── Arrow key nudge (5 canvas-px, same as Python) ─────────────────
     window.addEventListener('keydown', e => {
-      if (!calibMode) return;
-      const step = 2;
-      if (e.key === 'ArrowLeft') { LEFT_RECT.x -= step; RIGHT_RECT.x -= step; NAME_RECT.x -= step; }
-      if (e.key === 'ArrowRight') { LEFT_RECT.x += step; RIGHT_RECT.x += step; NAME_RECT.x += step; }
-      if (e.key === 'ArrowUp') { LEFT_RECT.y -= step; RIGHT_RECT.y -= step; NAME_RECT.y -= step; }
-      if (e.key === 'ArrowDown') { LEFT_RECT.y += step; RIGHT_RECT.y += step; NAME_RECT.y += step; }
-      updateHandles();
-      draw();
-      updateCoordOutput();
+      if (!photoImg) return;
+      const step = 5;
+      if (e.key === 'ArrowLeft')  { photoX -= step; e.preventDefault(); }
+      if (e.key === 'ArrowRight') { photoX += step; e.preventDefault(); }
+      if (e.key === 'ArrowUp')    { photoY -= step; e.preventDefault(); }
+      if (e.key === 'ArrowDown')  { photoY += step; e.preventDefault(); }
     });
 
-    // Initial load
-    setTimeout(() => {
-      loadDemo(true);
-      document.getElementById('mainControls').style.display = 'block';
-      document.getElementById('nameInput').value = 'LEELOO DALLAS';
-    }, 600);
+    // ── Touch: drag + pinch zoom ─────────────────────────────────────
+    canvas.addEventListener('touchstart', e => {
+      if (!photoImg) return;
+      if (e.touches.length === 1) {
+        isDragging = true;
+        const p = toCanvas(e.touches[0].clientX, e.touches[0].clientY);
+        dragStartX = p.x; dragStartY = p.y;
+        dragPhotoX0 = photoX; dragPhotoY0 = photoY;
+      }
+      if (e.touches.length === 2) {
+        lastTouchDist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+      }
+      e.preventDefault();
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', e => {
+      if (!photoImg) return;
+      if (e.touches.length === 1 && isDragging) {
+        const p = toCanvas(e.touches[0].clientX, e.touches[0].clientY);
+        photoX = dragPhotoX0 + (p.x - dragStartX);
+        photoY = dragPhotoY0 + (p.y - dragStartY);
+      }
+      if (e.touches.length === 2 && lastTouchDist) {
+        const d = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        photoScale = Math.max(0.05, Math.min(20, photoScale * (d / lastTouchDist)));
+        lastTouchDist = d;
+        syncSlider();
+      }
+      e.preventDefault();
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', () => { isDragging = false; lastTouchDist = null; });
   </script>
 </body>
 </html>
